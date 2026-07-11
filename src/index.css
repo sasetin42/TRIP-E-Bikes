@@ -329,3 +329,43 @@ select option {
   }
 }
 
+/* 2px Animated Glowing Neon Border Trail */
+.neon-trail-border-container {
+  position: relative;
+  border-radius: 1rem;
+  z-index: 1;
+  overflow: hidden;
+  padding: 2px; /* 2px weight trail */
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.neon-trail-border-container::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    transparent 35%,
+    #39FF14 45%,
+    #00FFFF 55%,
+    transparent 65%,
+    transparent 100%
+  );
+  animation: rotate-border 3s linear infinite;
+  z-index: -2;
+  opacity: 1;
+}
+
+.neon-trail-border-container::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: #0E0E0E;
+  border-radius: calc(1rem - 2px);
+  z-index: -1;
+}
+

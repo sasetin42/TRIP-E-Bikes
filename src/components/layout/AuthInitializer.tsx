@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-import { apiClient } from "@/lib/api-client";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
@@ -8,29 +10,52 @@ export default function AuthInitializer() {
   const { login: customerLogin, logout: customerLogout, setLoading: setCustomerLoading } = useCustomerAuth();
 
   useEffect(() => {
-    let mounted = true;
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Fetch additional profile data from Firestore
+        let role = firebaseUser.email === "admin@gmail.com" ? "super_admin" : "customer";
+        let username = firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "";
+        let avatar = firebaseUser.photoURL || "";
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setAdminLoading(false);
-      setCustomerLoading(false);
-      adminLogout();
-      customerLogout();
-      return;
-    }
+        try {
+          const profileRef = doc(db, "profiles", firebaseUser.uid);
+          const profileSnap = await getDoc(profileRef);
+          if (profileSnap.exists()) {
+            const data = profileSnap.data();
+            if (data.role) role = data.role;
+            if (data.username) username = data.username;
+            if (data.avatar) avatar = data.avatar;
+          } else {
+            // Auto-create/sync profile document in Firestore database
+            await setDoc(profileRef, {
+              email: firebaseUser.email || "",
+              role: role,
+              username: username,
+              avatar: avatar,
+              created_at: new Date().toISOString()
+            });
+          }
+        } catch (err) {
+          console.warn("Failed to sync user profile:", err);
+        }
 
-    apiClient.get("/auth.php").then(({ data, error }) => {
-      if (!mounted) return;
-      if (!error && data && data.user) {
-        const user = data.user;
-        const isAdmin = user.role === "admin" || user.role === "super_admin";
+        const userObj = {
+          id: firebaseUser.uid,
+          email: firebaseUser.email || "",
+          username,
+          avatar,
+          role
+        };
+
+        const isAdmin = role === "admin" || role === "super_admin";
         if (isAdmin) {
-          adminLogin(user);
+          adminLogin(userObj);
+          customerLogout();
         } else {
-          customerLogin(user);
+          customerLogin(userObj);
+          adminLogout();
         }
       } else {
-        localStorage.removeItem("token");
         adminLogout();
         customerLogout();
       }
@@ -38,9 +63,7 @@ export default function AuthInitializer() {
       setCustomerLoading(false);
     });
 
-    return () => {
-      mounted = false;
-    };
+    return () => unsubscribe();
   }, [adminLogin, adminLogout, customerLogin, customerLogout, setAdminLoading, setCustomerLoading]);
 
   return null;

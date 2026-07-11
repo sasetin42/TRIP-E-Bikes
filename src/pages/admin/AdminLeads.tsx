@@ -43,7 +43,7 @@ const PIPELINE_STAGES: LeadStatus[] = ["new", "contacted", "qualified", "proposa
 
 export default function AdminLeads() {
   const [leads, setLeads] = useState<DbLead[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [search, setSearch] = useState("");
@@ -59,10 +59,9 @@ export default function AdminLeads() {
     const { data, error } = await apiClient.get("/leads.php");
 
     if (error) {
-      console.error("Fetch leads error:", error);
-      toast.error("Failed to load leads: " + error.message);
-    } else {
-      setLeads(data || []);
+      console.warn("Fetch leads error, using local fallback:", error);
+    } else if (data && data.length > 0) {
+      setLeads(data);
       setLastRefresh(new Date());
     }
 

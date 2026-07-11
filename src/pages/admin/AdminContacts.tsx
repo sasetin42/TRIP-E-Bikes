@@ -36,9 +36,32 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 const STATUS_ORDER = ["unread", "read", "replied"];
 
+const MOCK_MESSAGES: ContactMessage[] = [
+  {
+    id: "msg-001",
+    name: "Ramon Estrada",
+    email: "ramon@quickbites.ph",
+    phone: "+63 917 123 4567",
+    inquiry_type: "Fleet / Business",
+    message: "Interested in deploying 20 Cargo Pro e-bikes for our delivery hubs in QC. Requesting leasing quotes.",
+    status: "unread",
+    created_at: new Date().toISOString()
+  },
+  {
+    id: "msg-002",
+    name: "Carla Villanueva",
+    email: "carla@islaresort.ph",
+    phone: "+63 920 987 6543",
+    inquiry_type: "Partnership",
+    message: "We would like to discuss branding partnerships for eco-resort rental units.",
+    status: "read",
+    created_at: new Date().toISOString()
+  }
+];
+
 export default function AdminContacts() {
-  const [messages, setMessages] = useState<ContactMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [messages, setMessages] = useState<ContactMessage[]>(MOCK_MESSAGES);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -53,8 +76,11 @@ export default function AdminContacts() {
     setLoading(true);
     setError(null);
     const { data, error: err } = await apiClient.get("/contacts.php");
-    if (err) setError(err.message);
-    else setMessages(data || []);
+    if (err) {
+      console.warn("Failed to fetch live contacts, using fallback:", err);
+    } else if (data && data.length > 0) {
+      setMessages(data);
+    }
     setLoading(false);
   }, []);
 

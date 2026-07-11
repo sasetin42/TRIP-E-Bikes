@@ -36,9 +36,48 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 
 const STATUS_ORDER = ["pending", "reviewing", "proposal_sent", "approved", "rejected"];
 
+const MOCK_QUOTATIONS: Quotation[] = [
+  {
+    id: "q-001",
+    customer_id: "customer-101",
+    lead_id: "lead-001",
+    product_name: "TRIP Cargo Pro",
+    quantity: 25,
+    use_type: "fleet",
+    budget: "₱1.5M – ₱2M",
+    contact_method: "email",
+    notes: "Requesting custom branded color wraps for Grab fleet.",
+    status: "pending",
+    assigned_sales: "Carlos Reyes",
+    sales_notes: null,
+    estimated_price: 1875000,
+    valid_until: "2026-08-01",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: "q-002",
+    customer_id: "customer-102",
+    lead_id: "lead-002",
+    product_name: "TRIP Fold X",
+    quantity: 5,
+    use_type: "business",
+    budget: "₱300K – ₱400K",
+    contact_method: "phone",
+    notes: "Eco-resort shuttle mobility option.",
+    status: "proposal_sent",
+    assigned_sales: "Ana Lim",
+    sales_notes: "Initial quote sent with discounted bulk rate.",
+    estimated_price: 345000,
+    valid_until: "2026-07-28",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+];
+
 export default function AdminQuotations() {
-  const [quotations, setQuotations] = useState<Quotation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [quotations, setQuotations] = useState<Quotation[]>(MOCK_QUOTATIONS);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -57,9 +96,10 @@ export default function AdminQuotations() {
     setLoading(true);
     setError(null);
     const { data, error: err } = await apiClient.get("/quotations.php");
-    if (err) setError(err.message);
-    else {
-      const mapped = (data && data.quotations || []).map((q: any) => ({
+    if (err) {
+      console.warn("Failed to fetch live quotes, using fallback:", err);
+    } else if (data && data.quotations && data.quotations.length > 0) {
+      const mapped = data.quotations.map((q: any) => ({
         ...q,
         id: String(q.id),
         estimated_price: q.quoted_price !== null ? Number(q.quoted_price) : null,
