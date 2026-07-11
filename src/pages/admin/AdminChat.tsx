@@ -4,20 +4,7 @@ import {
   X, Zap, Archive, MessageCircle, Bell, BellOff
 } from "lucide-react";
 import { toast } from "sonner";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  addDoc,
-  updateDoc,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
-  Timestamp
-} from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
 interface ChatSession {
@@ -70,6 +57,7 @@ export default function AdminChat() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
   const prevUnreadRef = useRef<Record<string, number>>({});
   const notifEnabledRef = useRef(false);
 
@@ -117,91 +105,68 @@ export default function AdminChat() {
 
   const fetchSessions = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    try {
-      const sessionsQuery = query(collection(db, "chat_sessions"), orderBy("updated_at", "desc"));
-      const sessionsSnap = await getDocs(sessionsQuery);
-      const enriched = [];
-      for (const sessionDoc of sessionsSnap.docs) {
-        const s = sessionDoc.data();
-        
-        // Fetch all messages for this session
-        const msgsSnap = await getDocs(
-          query(collection(db, "chat_messages"), where("session_id", "==", sessionDoc.id), orderBy("created_at", "asc"))
-        );
-        const msgs = msgsSnap.docs.map(doc => doc.data());
-        const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
-        const unreadCount = msgs.filter((m: any) => m.sender !== "agent" && !m.read).length;
+    const { data, error } = await supabase
+      .from("chat_sessions")
+      .select("*")
+      .order("last_message_at", { ascending: false });
 
-        enriched.push({
-          id: sessionDoc.id,
-          customer_name: s.user_name || "Visitor",
-          customer_email: s.user_email || "",
-          status: s.status || "open",
-          assigned_agent: s.assigned_agent || null,
-          last_message_at: lastMsg ? (lastMsg.created_at instanceof Timestamp ? lastMsg.created_at.toDate().toISOString() : lastMsg.created_at) : (s.updated_at instanceof Timestamp ? s.updated_at.toDate().toISOString() : s.updated_at),
-          created_at: s.created_at instanceof Timestamp ? s.created_at.toDate().toISOString() : s.created_at,
-          unread_count: unreadCount,
-          last_message: lastMsg ? lastMsg.message : "",
-        });
+    if (error) { if (!silent) setLoading(false); return; }
+
+    const enriched = await Promise.all((data || []).map(async (s) => {
+      const { count } = await supabase
+        .from("chat_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("session_id", s.id)
+        .eq("sender_type", "customer")
+        .eq("read", false);
+
+      const { data: lastMsg } = await supabase
+        .from("chat_messages")
+        .select("message,sender_name")
+        .eq("session_id", s.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      return { ...s, unread_count: count || 0, last_message: lastMsg?.message || "" };
+    }));
+
+    // ── Detect new unread messages and fire desktop notifications ──
+    enriched.forEach(sess => {
+      const prevCount = prevUnreadRef.current[sess.id] || 0;
+      const newCount = sess.unread_count || 0;
+      if (newCount > prevCount && newCount > 0) {
+        sendDesktopNotification(sess.customer_name, sess.last_message || "New message");
       }
-      
-      // Fire notifications
-      enriched.forEach((sess: any) => {
-        const prevCount = prevUnreadRef.current[sess.id] || 0;
-        const newCount = sess.unread_count || 0;
-        if (newCount > prevCount && newCount > 0) {
-          sendDesktopNotification(sess.customer_name, sess.last_message || "New message");
-        }
-      });
-      prevUnreadRef.current = Object.fromEntries(enriched.map((s: any) => [s.id, s.unread_count || 0]));
+    });
+    prevUnreadRef.current = Object.fromEntries(enriched.map(s => [s.id, s.unread_count || 0]));
 
-      setSessions(enriched);
-    } catch (e: any) {
-      console.warn("fetchSessions failed:", e);
-    } finally {
-      if (!silent) setLoading(false);
-    }
+    setSessions(enriched);
+    if (!silent) setLoading(false);
   }, [sendDesktopNotification]);
 
   const fetchMessages = useCallback(async () => {
     if (!selected) return;
-    try {
-      const q = query(
-        collection(db, "chat_messages"),
-        where("session_id", "==", selected.id),
-        orderBy("created_at", "asc")
-      );
-      const msgsSnap = await getDocs(q);
-      const mapped = msgsSnap.docs.map((docSnap) => {
-        const m = docSnap.data();
-        return {
-          id: docSnap.id,
-          session_id: m.session_id,
-          sender_type: m.sender === "user" ? "customer" : m.sender,
-          sender_name: m.sender === "user" ? "You" : (m.sender === "bot" ? "TRIP AI" : "Agent"),
-          message: m.message,
-          read: m.read === 1 || m.read === true,
-          created_at: m.created_at instanceof Timestamp ? m.created_at.toDate().toISOString() : m.created_at,
-        };
-      });
-      setMessages(mapped);
+    const { data } = await supabase
+      .from("chat_messages")
+      .select("*")
+      .eq("session_id", selected.id)
+      .order("created_at", { ascending: true });
+    setMessages(data || []);
 
-      // Mark messages as read
-      for (const docSnap of msgsSnap.docs) {
-        const m = docSnap.data();
-        if (m.sender !== "agent" && !m.read) {
-          await updateDoc(docSnap.ref, { read: true });
-        }
-      }
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    } catch (e) {
-      console.warn("fetchMessages failed:", e);
-    }
+    await supabase
+      .from("chat_messages")
+      .update({ read: true })
+      .eq("session_id", selected.id)
+      .eq("sender_type", "customer")
+      .eq("read", false);
+
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [selected]);
 
   useEffect(() => {
     fetchSessions();
-    const interval = setInterval(() => fetchSessions(true), 10000);
+    const interval = setInterval(() => fetchSessions(true), 5000);
     return () => clearInterval(interval);
   }, [fetchSessions]);
 
@@ -209,59 +174,29 @@ export default function AdminChat() {
     if (!selected) return;
     setMsgLoading(true);
     fetchMessages().then(() => setMsgLoading(false));
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(fetchMessages, 3000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [selected, fetchMessages]);
-
-  useEffect(() => {
-    if (!selected) return;
-    // Subscribe to messages changes
-    const q = query(
-      collection(db, "chat_messages"),
-      where("session_id", "==", selected.id),
-      orderBy("created_at", "asc")
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const mapped = snapshot.docs.map((docSnap) => {
-        const m = docSnap.data();
-        return {
-          id: docSnap.id,
-          session_id: m.session_id,
-          sender_type: m.sender === "user" ? "customer" : m.sender,
-          sender_name: m.sender === "user" ? "You" : (m.sender === "bot" ? "TRIP AI" : "Agent"),
-          message: m.message,
-          read: m.read === 1 || m.read === true,
-          created_at: m.created_at instanceof Timestamp ? m.created_at.toDate().toISOString() : m.created_at,
-        };
-      });
-      setMessages(mapped);
-      fetchSessions(true);
-    });
-
-    return () => unsubscribe();
-  }, [selected, fetchSessions]);
 
   const sendMessage = async () => {
     if (!input.trim() || !selected || sending) return;
     const msg = input.trim();
     setInput("");
     setSending(true);
-    try {
-      await addDoc(collection(db, "chat_messages"), {
-        session_id: selected.id,
-        sender: "agent",
-        message: msg,
-        read: true,
-        created_at: Timestamp.now()
-      });
-      await updateDoc(doc(db, "chat_sessions", selected.id), {
-        assigned_agent: user?.username || "Agent",
-        updated_at: Timestamp.now()
-      });
-      await fetchMessages();
-    } catch (e) {
-      console.warn("sendMessage failed:", e);
-    } finally {
-      setSending(false);
-    }
+    await supabase.from("chat_messages").insert({
+      session_id: selected.id,
+      sender_type: "agent",
+      sender_name: user?.username || "TRIP Agent",
+      message: msg,
+      read: false,
+    });
+    await supabase.from("chat_sessions").update({
+      assigned_agent: user?.username,
+      last_message_at: new Date().toISOString(),
+    }).eq("id", selected.id);
+    await fetchMessages();
+    setSending(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -269,16 +204,11 @@ export default function AdminChat() {
   };
 
   const updateStatus = async (sessionId: string, status: string) => {
-    try {
-      await updateDoc(doc(db, "chat_sessions", sessionId), {
-        status,
-        updated_at: Timestamp.now()
-      });
+    const { error } = await supabase.from("chat_sessions").update({ status }).eq("id", sessionId);
+    if (!error) {
       setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status } : s));
       if (selected?.id === sessionId) setSelected(s => s ? { ...s, status } : null);
       toast.success(`Chat marked as ${status}`);
-    } catch (e: any) {
-      toast.error("Failed to update status: " + e.message);
     }
   };
 
@@ -392,7 +322,7 @@ export default function AdminChat() {
                   <div className="flex items-start gap-3">
                     <div className="relative shrink-0">
                       <div className="w-9 h-9 rounded-full bg-white/8 border border-white/10 flex items-center justify-center font-bold text-white text-sm">
-                        {(s.customer_name || "?")[0]?.toUpperCase()}
+                        {s.customer_name[0]?.toUpperCase()}
                       </div>
                       {(s.unread_count || 0) > 0 && (
                         <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#39FF14] text-[#0A0A0A] text-[9px] font-black flex items-center justify-center">{s.unread_count}</span>
@@ -438,7 +368,7 @@ export default function AdminChat() {
               <div className="flex items-center gap-4 px-5 py-4 border-b border-white/8 bg-white/2 shrink-0">
                 <div className="relative">
                   <div className="w-10 h-10 rounded-full bg-white/8 border border-white/10 flex items-center justify-center font-bold text-white text-sm">
-                    {(selected.customer_name || "?")[0]?.toUpperCase()}
+                    {selected.customer_name[0]?.toUpperCase()}
                   </div>
                   <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0D0D0D] ${STATUS_CONFIG[selected.status]?.dot || "bg-gray-500"}`} />
                 </div>
@@ -464,7 +394,7 @@ export default function AdminChat() {
                   <div key={msg.id} className={`flex gap-2.5 ${msg.sender_type === "agent" ? "flex-row-reverse" : "flex-row"}`}>
                     {msg.sender_type !== "agent" && (
                       <div className="w-8 h-8 rounded-full bg-white/8 border border-white/10 flex items-center justify-center text-xs font-bold text-white shrink-0 mt-auto">
-                        {msg.sender_type === "bot" ? "🤖" : (msg.sender_name || "?")[0]?.toUpperCase()}
+                        {msg.sender_type === "bot" ? "🤖" : msg.sender_name[0]?.toUpperCase()}
                       </div>
                     )}
                     <div className={`max-w-[70%] rounded-xl px-4 py-3 ${

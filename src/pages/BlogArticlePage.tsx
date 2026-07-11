@@ -5,7 +5,7 @@ import {
   Clock, User, ArrowLeft, Share2, Facebook, Twitter, Linkedin,
   BookOpen, ChevronRight, Loader2, AlertCircle, Tag, Copy, Check
 } from "lucide-react";
-import { apiClient } from "@/lib/api-client";
+import { supabase } from "@/lib/supabase";
 import ParticleField from "@/components/features/ParticleField";
 
 interface BlogPost {
@@ -39,7 +39,12 @@ export default function BlogArticlePage() {
   const fetchPost = async () => {
     setLoading(true);
     setError(null);
-    const { data, error: err } = await apiClient.get(`/blog.php?slug=${slug}`);
+    const { data, error: err } = await supabase
+      .from("blog_posts")
+      .select("*")
+      .eq("slug", slug)
+      .eq("published", true)
+      .single();
 
     if (err || !data) {
       setError("Article not found.");
@@ -49,8 +54,15 @@ export default function BlogArticlePage() {
 
     setPost(data);
 
-    // Fetch related posts
-    const { data: relatedData } = await apiClient.get(`/blog.php?action=related&exclude=${slug}`);
+    // Fetch related posts from same category
+    const { data: relatedData } = await supabase
+      .from("blog_posts")
+      .select("*")
+      .eq("published", true)
+      .eq("category", data.category)
+      .neq("id", data.id)
+      .order("created_at", { ascending: false })
+      .limit(3);
 
     setRelated(relatedData || []);
     setLoading(false);
@@ -259,7 +271,7 @@ export default function BlogArticlePage() {
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-6 border-b border-white/8">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#39FF14]/20 to-[#00FFFF]/10 border border-[#39FF14]/30 flex items-center justify-center font-bold text-[#39FF14] text-sm">
-{(post.author || "?")[0]?.toUpperCase()}
+                {post.author[0]?.toUpperCase()}
               </div>
               <div>
                 <p className="text-sm font-semibold text-white">{post.author}</p>

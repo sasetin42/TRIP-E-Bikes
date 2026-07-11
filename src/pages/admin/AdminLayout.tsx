@@ -4,31 +4,24 @@ import {
   LayoutDashboard, Users, Package, FileText, UserCog,
   Zap, Bell, Search, Menu, X, ExternalLink, LogOut,
   ChevronRight, BarChart3, Receipt, MessageSquare, MessageCircle,
-  Calendar, Settings, Globe, ShieldCheck, Mail, Megaphone,
-  FileImage, Compass, Sparkles
+  Calendar, Settings
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import NotificationBell from "@/components/features/NotificationBell";
-
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
   { icon: Users, label: "Leads & CRM", href: "/admin/leads" },
   { icon: Receipt, label: "Quotations", href: "/admin/quotations" },
   { icon: MessageSquare, label: "Contacts", href: "/admin/contacts" },
+  { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
   { icon: Package, label: "Products", href: "/admin/products" },
-  { icon: Globe, label: "Website CMS", href: "/admin/cms" },
-  { icon: FileText, label: "Content CMS", href: "/admin/content" },
-  { icon: FileImage, label: "Media Library", href: "/admin/media" },
+  { icon: FileText, label: "Content", href: "/admin/content" },
   { icon: MessageCircle, label: "Live Chat", href: "/admin/chat" },
   { icon: Calendar, label: "Appointments", href: "/admin/appointments" },
-  { icon: BarChart3, label: "Analytics", href: "/admin/analytics" },
-  { icon: Megaphone, label: "Marketing", href: "/admin/marketing" },
-  { icon: Compass, label: "SEO Settings", href: "/admin/seo" },
-  { icon: UserCog, label: "Admin Management", href: "/admin/users" },
-  { icon: Settings, label: "System Settings", href: "/admin/settings" },
+  { icon: UserCog, label: "Users", href: "/admin/users" },
+  { icon: Settings, label: "Settings", href: "/admin/settings" },
 ];
 
 export default function AdminLayout() {
@@ -41,11 +34,11 @@ export default function AdminLayout() {
   // Poll for new leads count
   useEffect(() => {
     const fetchNewLeads = async () => {
-      const { data, error } = await apiClient.get("/leads.php");
-      if (!error && data) {
-        const newLeads = data.filter((l: any) => l.status === "new");
-        setNewLeadsCount(newLeads.length);
-      }
+      const { count } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "new");
+      setNewLeadsCount(count || 0);
     };
     fetchNewLeads();
     const interval = setInterval(fetchNewLeads, 30000);
@@ -53,8 +46,7 @@ export default function AdminLayout() {
   }, []);
 
   const handleLogout = async () => {
-    await apiClient.post("/auth.php?action=logout");
-    localStorage.removeItem("token");
+    await supabase.auth.signOut();
     logout();
     navigate("/admin/login");
     toast.success("Signed out from admin panel");
@@ -81,7 +73,7 @@ export default function AdminLayout() {
         {sidebarOpen && user && (
           <div className="px-4 py-3 border-b border-white/5 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center font-bold text-[#39FF14] text-sm shrink-0">
-              {(user.username || "A")[0].toUpperCase()}
+              {user.username[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-white truncate">{user.username}</p>
@@ -157,7 +149,14 @@ export default function AdminLayout() {
             />
           </div>
           <div className="flex items-center gap-3 ml-auto">
-            <NotificationBell isAdmin={true} />
+            <Link to="/admin/leads" className="relative w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 text-gray-400 hover:border-[#39FF14]/30 hover:text-[#39FF14] transition-all">
+              <Bell className="w-4 h-4" />
+              {newLeadsCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#39FF14] rounded-full flex items-center justify-center text-[9px] font-black text-[#0A0A0A]">
+                  {newLeadsCount > 9 ? "9+" : newLeadsCount}
+                </span>
+              )}
+            </Link>
             <div className="w-9 h-9 rounded-full bg-[#39FF14]/20 border border-[#39FF14]/30 flex items-center justify-center font-orbitron font-bold text-sm text-[#39FF14]">
               {user?.username?.[0]?.toUpperCase() || "A"}
             </div>

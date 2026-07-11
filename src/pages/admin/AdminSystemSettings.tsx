@@ -1,15 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { Settings, Loader2, Save, ToggleLeft, ToggleRight, Shield, MessageCircle, Star, Gift, RefreshCw, Palette, Image as ImageIcon, Upload, Copy, Check, Eye, EyeOff, Link } from "lucide-react";
+import { Settings, Loader2, Save, ToggleLeft, ToggleRight, Shield, MessageCircle, Star, Gift, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
-import { storage } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { supabase } from "@/lib/supabase";
 
 interface SystemSetting {
   key: string;
-  value: any;
-  label?: string;
-  description?: string;
+  value: boolean;
+  label: string;
+  description: string;
 }
 
 const SETTING_ICONS: Record<string, any> = {
@@ -19,628 +17,90 @@ const SETTING_ICONS: Record<string, any> = {
   referral_enabled: Shield,
 };
 
-const GOOGLE_FONTS = [
-  { label: "Orbitron (Futuristic/Tech)", value: "Orbitron" },
-  { label: "Inter (Clean/Modern)", value: "Inter" },
-  { label: "Plus Jakarta Sans (Premium)", value: "Plus Jakarta Sans" },
-  { label: "Outfit (Geometric/Sleek)", value: "Outfit" },
-  { label: "Roboto (Neutral/Clean)", value: "Roboto" },
-  { label: "Montserrat (Bold/Classic)", value: "Montserrat" },
-];
-
 export default function AdminSystemSettings() {
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"features" | "appearance" | "brand" | "integrations">("features");
-
-  // Appearance State
-  const [brandColor, setBrandColor] = useState("#39FF14");
-  const [fontConfig, setFontConfig] = useState("Orbitron");
-
-  // Brand Assets State
-  const [logoUrl, setLogoUrl] = useState("");
-  const [faviconUrl, setFaviconUrl] = useState("");
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [uploadingFavicon, setUploadingFavicon] = useState(false);
-
-  // Integrations State
-  const [webhookSecret, setWebhookSecret] = useState("");
-  const [showSecret, setShowSecret] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [resendApiKey, setResendApiKey] = useState("");
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [resendFromEmail, setResendFromEmail] = useState("noreply@tripmobility.ph");
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await apiClient.get("/settings.php");
+    const { data, error } = await supabase.from("system_settings").select("*").order("key");
     if (!error && data) {
-      setSettings(data);
-      // Map loaded values to states
-      const colorSetting = data.find((s: any) => s.key === "primary_brand_color");
-      if (colorSetting) setBrandColor(colorSetting.value);
-
-      const fontSetting = data.find((s: any) => s.key === "font_configuration");
-      if (fontSetting) setFontConfig(fontSetting.value);
-
-      const logoSetting = data.find((s: any) => s.key === "brand_logo");
-      if (logoSetting) setLogoUrl(logoSetting.value);
-
-      const faviconSetting = data.find((s: any) => s.key === "brand_favicon");
-      if (faviconSetting) setFaviconUrl(faviconSetting.value);
-
-      const webhookSecretSetting = data.find((s: any) => s.key === "resend_webhook_signing_secret");
-      if (webhookSecretSetting) setWebhookSecret(webhookSecretSetting.value);
-
-      const apiKeySetting = data.find((s: any) => s.key === "resend_api_key");
-      if (apiKeySetting) setResendApiKey(apiKeySetting.value);
-
-      const fromEmailSetting = data.find((s: any) => s.key === "resend_from_email");
-      if (fromEmailSetting) setResendFromEmail(fromEmailSetting.value);
+      setSettings(data.map((s: any) => ({ ...s, value: s.value === true || s.value === "true" })));
     }
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+  useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
   const toggleSetting = async (key: string, currentValue: boolean) => {
     setSaving(key);
     const newValue = !currentValue;
-    const { error } = await apiClient.put(`/settings.php?key=${key}`, { value: newValue });
+    const { error } = await supabase.from("system_settings").update({ value: newValue, updated_at: new Date().toISOString() }).eq("key", key);
     if (error) {
       toast.error("Failed to update setting: " + error.message);
     } else {
       setSettings(prev => prev.map(s => s.key === key ? { ...s, value: newValue } : s));
-      toast.success(`${key.replace(/_/g, " ")} updated successfully`);
+      toast.success(`${key.replace(/_/g, " ")} ${newValue ? "enabled" : "disabled"}`);
     }
     setSaving(null);
   };
 
-  const handleSaveAppearance = async () => {
-    setSaving("appearance");
-    try {
-      const { error: colorErr } = await apiClient.put(`/settings.php?key=primary_brand_color`, { value: brandColor });
-      const { error: fontErr } = await apiClient.put(`/settings.php?key=font_configuration`, { value: fontConfig });
-
-      if (colorErr || fontErr) {
-        toast.error("Failed to save some appearance settings.");
-      } else {
-        toast.success("Appearance settings updated successfully!");
-        // Update local settings list
-        setSettings(prev => {
-          const updated = [...prev];
-          const colorIdx = updated.findIndex(s => s.key === "primary_brand_color");
-          if (colorIdx > -1) updated[colorIdx].value = brandColor;
-          else updated.push({ key: "primary_brand_color", value: brandColor });
-
-          const fontIdx = updated.findIndex(s => s.key === "font_configuration");
-          if (fontIdx > -1) updated[fontIdx].value = fontConfig;
-          else updated.push({ key: "font_configuration", value: fontConfig });
-
-          return updated;
-        });
-      }
-    } catch (e: any) {
-      toast.error("An error occurred: " + e.message);
-    } finally {
-      setSaving(null);
-    }
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "brand_logo" | "brand_favicon") => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const isLogo = type === "brand_logo";
-    if (isLogo) setUploadingLogo(true);
-    else setUploadingFavicon(true);
-
-    try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${type}-${Date.now()}.${fileExt}`;
-
-      // Upload file to Firebase storage 'brand-assets'
-      const storageRef = ref(storage, `brand-assets/${fileName}`);
-      await uploadBytes(storageRef, file);
-
-      // Get public URL
-      const publicUrl = await getDownloadURL(storageRef);
-
-      // Save to system_settings
-      const { error: apiError } = await apiClient.put(`/settings.php?key=${type}`, { value: publicUrl });
-
-      if (apiError) throw apiError;
-
-      if (isLogo) {
-        setLogoUrl(publicUrl);
-        toast.success("Logo uploaded and updated successfully!");
-      } else {
-        setFaviconUrl(publicUrl);
-        toast.success("Favicon uploaded and updated successfully!");
-      }
-
-      // Update settings locally
-      setSettings(prev => {
-        const updated = [...prev];
-        const idx = updated.findIndex(s => s.key === type);
-        if (idx > -1) updated[idx].value = publicUrl;
-        else updated.push({ key: type, value: publicUrl });
-        return updated;
-      });
-    } catch (err: any) {
-      toast.error("Upload failed: " + err.message);
-    } finally {
-      if (isLogo) setUploadingLogo(false);
-      else setUploadingFavicon(false);
-    }
-  };
-
-  const handleSaveIntegrations = async () => {
-    setSaving("integrations");
-    try {
-      const results = await Promise.all([
-        apiClient.put(`/settings.php?key=resend_webhook_signing_secret`, { value: webhookSecret }),
-        apiClient.put(`/settings.php?key=resend_api_key`, { value: resendApiKey }),
-        apiClient.put(`/settings.php?key=resend_from_email`, { value: resendFromEmail })
-      ]);
-
-      const failed = results.find(r => r.error);
-      if (failed) {
-        toast.error("Failed to save integration settings: " + failed.error.message);
-      } else {
-        toast.success("Integration settings saved successfully!");
-        setSettings(prev => {
-          const updated = [...prev];
-          
-          const secretIdx = updated.findIndex(s => s.key === "resend_webhook_signing_secret");
-          if (secretIdx > -1) updated[secretIdx].value = webhookSecret;
-          else updated.push({ key: "resend_webhook_signing_secret", value: webhookSecret });
-
-          const apiIdx = updated.findIndex(s => s.key === "resend_api_key");
-          if (apiIdx > -1) updated[apiIdx].value = resendApiKey;
-          else updated.push({ key: "resend_api_key", value: resendApiKey });
-
-          const fromIdx = updated.findIndex(s => s.key === "resend_from_email");
-          if (fromIdx > -1) updated[fromIdx].value = resendFromEmail;
-          else updated.push({ key: "resend_from_email", value: resendFromEmail });
-
-          return updated;
-        });
-      }
-    } catch (e: any) {
-      toast.error("An error occurred: " + e.message);
-    } finally {
-      setSaving(null);
-    }
-  };
-
   if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" />
-      </div>
-    );
+    return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" /></div>;
   }
-
-  // Filter features only
-  const featureSettings = settings.filter(s =>
-    ["loyalty_program_enabled", "chat_enabled", "reviews_enabled", "referral_enabled"].includes(s.key)
-  );
 
   return (
     <div>
-      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="font-orbitron font-bold text-2xl text-white">System Settings</h1>
-          <p className="text-gray-500 text-sm mt-1">Configure and manage your platform globally</p>
+          <p className="text-gray-500 text-sm mt-1">Enable or disable platform features globally</p>
         </div>
-        <button
-          onClick={fetchSettings}
-          className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh
+        <button onClick={fetchSettings} className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all">
+          <RefreshCw className="w-3.5 h-3.5" />Refresh
         </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-white/5 mb-8 gap-6">
-        <button
-          onClick={() => setActiveTab("features")}
-          className={`flex items-center gap-2 pb-4 text-sm font-semibold tracking-wide border-b-2 transition-all ${
-            activeTab === "features"
-              ? "border-[#39FF14] text-[#39FF14]"
-              : "border-transparent text-gray-500 hover:text-gray-300"
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          Features
-        </button>
-        <button
-          onClick={() => setActiveTab("appearance")}
-          className={`flex items-center gap-2 pb-4 text-sm font-semibold tracking-wide border-b-2 transition-all ${
-            activeTab === "appearance"
-              ? "border-[#39FF14] text-[#39FF14]"
-              : "border-transparent text-gray-500 hover:text-gray-300"
-          }`}
-        >
-          <Palette className="w-4 h-4" />
-          Appearance
-        </button>
-        <button
-          onClick={() => setActiveTab("brand")}
-          className={`flex items-center gap-2 pb-4 text-sm font-semibold tracking-wide border-b-2 transition-all ${
-            activeTab === "brand"
-              ? "border-[#39FF14] text-[#39FF14]"
-              : "border-transparent text-gray-500 hover:text-gray-300"
-          }`}
-        >
-          <ImageIcon className="w-4 h-4" />
-          Brand Assets
-        </button>
-        <button
-          onClick={() => setActiveTab("integrations")}
-          className={`flex items-center gap-2 pb-4 text-sm font-semibold tracking-wide border-b-2 transition-all ${
-            activeTab === "integrations"
-              ? "border-[#39FF14] text-[#39FF14]"
-              : "border-transparent text-gray-500 hover:text-gray-300"
-          }`}
-        >
-          <Link className="w-4 h-4" />
-          Integrations
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {settings.map(setting => {
+          const IconComp = SETTING_ICONS[setting.key] || Settings;
+          return (
+            <div key={setting.key} className={`glass rounded-2xl border p-6 transition-all ${setting.value ? "border-[#39FF14]/20 bg-[#39FF14]/3" : "border-white/5"}`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 transition-all ${setting.value ? "bg-[#39FF14]/15 border-[#39FF14]/30" : "bg-white/5 border-white/10"}`}>
+                    <IconComp className={`w-6 h-6 ${setting.value ? "text-[#39FF14]" : "text-gray-500"}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-white text-sm">{setting.label}</h3>
+                    <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{setting.description}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => toggleSetting(setting.key, setting.value)}
+                  disabled={saving === setting.key}
+                  className="shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                >
+                  {saving === setting.key ? (
+                    <Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" />
+                  ) : setting.value ? (
+                    <ToggleRight className="w-10 h-10 text-[#39FF14]" />
+                  ) : (
+                    <ToggleLeft className="w-10 h-10 text-gray-500" />
+                  )}
+                </button>
+              </div>
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${setting.value ? "bg-[#39FF14]/15 text-[#39FF14]" : "bg-gray-500/15 text-gray-500"}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${setting.value ? "bg-[#39FF14]" : "bg-gray-500"}`} />
+                  {setting.value ? "Active" : "Disabled"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
-
-      {/* Tab Contents */}
-      {activeTab === "features" ? (
-        <div key="features" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {featureSettings.map(setting => {
-            const IconComp = SETTING_ICONS[setting.key] || Settings;
-            const isEnabled = setting.value === true || setting.value === "true";
-            return (
-              <div
-                key={setting.key}
-                className={`glass rounded-2xl border p-6 transition-all ${
-                  isEnabled ? "border-[#39FF14]/20 bg-[#39FF14]/3" : "border-white/5"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 transition-all ${
-                        isEnabled ? "bg-[#39FF14]/15 border-[#39FF14]/30" : "bg-white/5 border-white/10"
-                      }`}
-                    >
-                      <IconComp className={`w-6 h-6 ${isEnabled ? "text-[#39FF14]" : "text-gray-500"}`} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white text-sm">{setting.label || setting.key}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{setting.description}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => toggleSetting(setting.key, isEnabled)}
-                    disabled={saving === setting.key}
-                    className="shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                  >
-                    {saving === setting.key ? (
-                      <Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" />
-                    ) : isEnabled ? (
-                      <ToggleRight className="w-10 h-10 text-[#39FF14]" />
-                    ) : (
-                      <ToggleLeft className="w-10 h-10 text-gray-500" />
-                    )}
-                  </button>
-                </div>
-                <div className="mt-4 pt-4 border-t border-white/5">
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                      isEnabled ? "bg-[#39FF14]/15 text-[#39FF14]" : "bg-gray-500/15 text-gray-500"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${isEnabled ? "bg-[#39FF14]" : "bg-gray-500"}`} />
-                    {isEnabled ? "Active" : "Disabled"}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      ) : activeTab === "appearance" ? (
-        <div className="max-w-2xl glass rounded-2xl border border-white/5 p-8">
-          <h2 className="font-orbitron font-bold text-lg text-white mb-6">Visual Style Configuration</h2>
-          <div className="space-y-6">
-            {/* Color Picker */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                Primary Brand Color
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="color"
-                  value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  className="w-12 h-12 rounded-xl bg-transparent border border-white/10 cursor-pointer overflow-hidden"
-                />
-                <input
-                  type="text"
-                  value={brandColor}
-                  onChange={(e) => setBrandColor(e.target.value)}
-                  placeholder="#39FF14"
-                  className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#39FF14] transition-all"
-                />
-              </div>
-              <p className="text-[11px] text-gray-500 mt-2">
-                This color will be used for primary accents, buttons, and highlights across the public site.
-              </p>
-            </div>
-
-            {/* Font Config */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                Font Family Configuration
-              </label>
-              <select
-                value={fontConfig}
-                onChange={(e) => setFontConfig(e.target.value)}
-                className="w-full bg-[#0E0E0E] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#39FF14] transition-all"
-              >
-                {GOOGLE_FONTS.map((font) => (
-                  <option key={font.value} value={font.value}>
-                    {font.label}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-gray-500 mt-2">
-                Sets the main display and heading font styling on the public pages.
-              </p>
-            </div>
-
-            {/* Save Button */}
-            <div className="pt-4 border-t border-white/5 flex justify-end">
-              <button
-                onClick={handleSaveAppearance}
-                disabled={saving === "appearance"}
-                className="flex items-center gap-2 px-6 py-3 bg-[#39FF14] hover:bg-[#39FF14]/90 text-black text-xs font-bold uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                {saving === "appearance" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                Save Appearance
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : activeTab === "brand" ? (
-        <div key="brand" className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Logo Upload Card */}
-          <div className="glass rounded-2xl border border-white/5 p-8 flex flex-col justify-between">
-            <div>
-              <h3 className="font-orbitron font-bold text-white text-base mb-2">Main Brand Logo</h3>
-              <p className="text-xs text-gray-500 leading-relaxed mb-6">
-                Upload the primary logo for the header navigation and branding areas. Replaces the default SVG text/icon.
-              </p>
-
-              {logoUrl ? (
-                <div className="mb-6 p-4 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center h-28 relative group">
-                  <img src={logoUrl} alt="Main Logo Preview" className="max-h-20 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  <div className="absolute inset-0 bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                    <span className="text-[10px] uppercase font-bold text-[#39FF14]">Active URL Saved</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-6 border border-dashed border-white/15 rounded-xl h-28 flex flex-col items-center justify-center text-gray-500">
-                  <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
-                  <span className="text-xs">No custom logo uploaded yet</span>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer text-xs font-bold uppercase tracking-widest text-white transition-all hover:scale-[1.02] active:scale-[0.98]">
-                {uploadingLogo ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-[#39FF14]" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
-                {uploadingLogo ? "Uploading..." : "Upload Main Logo"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload(e, "brand_logo")}
-                  disabled={uploadingLogo}
-                  className="hidden"
-                />
-              </label>
-              {logoUrl && (
-                <p className="text-[10px] text-gray-600 mt-2 truncate text-center">
-                  URL: {logoUrl}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Favicon Upload Card */}
-          <div className="glass rounded-2xl border border-white/5 p-8 flex flex-col justify-between">
-            <div>
-              <h3 className="font-orbitron font-bold text-white text-base mb-2">Favicon Logo</h3>
-              <p className="text-xs text-gray-500 leading-relaxed mb-6">
-                Upload a small square branding icon (e.g. 32x32px or 64x64px) to be displayed in browser tabs.
-              </p>
-
-              {faviconUrl ? (
-                <div className="mb-6 p-4 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center h-28 relative group">
-                  <img src={faviconUrl} alt="Favicon Preview" className="w-12 h-12 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                  <div className="absolute inset-0 bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                    <span className="text-[10px] uppercase font-bold text-[#39FF14]">Active URL Saved</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="mb-6 border border-dashed border-white/15 rounded-xl h-28 flex flex-col items-center justify-center text-gray-500">
-                  <ImageIcon className="w-8 h-8 mb-2 opacity-50" />
-                  <span className="text-xs">No custom favicon uploaded yet</span>
-                </div>
-              )}
-            </div>
-
-            <div>
-              <label className="flex items-center justify-center gap-2 w-full py-3.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl cursor-pointer text-xs font-bold uppercase tracking-widest text-white transition-all hover:scale-[1.02] active:scale-[0.98]">
-                {uploadingFavicon ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-[#39FF14]" />
-                ) : (
-                  <Upload className="w-4 h-4" />
-                )}
-                {uploadingFavicon ? "Uploading..." : "Upload Favicon"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleFileUpload(e, "brand_favicon")}
-                  disabled={uploadingFavicon}
-                  className="hidden"
-                />
-              </label>
-              {faviconUrl && (
-                <p className="text-[10px] text-gray-600 mt-2 truncate text-center">
-                  URL: {faviconUrl}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div key="integrations" className="max-w-2xl glass rounded-2xl border border-white/5 p-8">
-          <h2 className="font-orbitron font-bold text-lg text-white mb-2">Integrations Configuration</h2>
-          <p className="text-xs text-gray-500 mb-6">Manage external developer services and webhooks.</p>
-          
-          <div className="space-y-6">
-            {/* Webhook Endpoint */}
-            <div className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  Resend Webhook Endpoint URL
-                </label>
-                <span className="text-[10px] text-[#39FF14] font-mono font-bold">POST</span>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value={`${import.meta.env.VITE_SUPABASE_URL || "https://ieijkjjyfgnnypfmieij.supabase.co"}/functions/v1/resend-webhook`}
-                  className="flex-1 bg-[#0A0A0A] border border-white/10 rounded-xl px-4 py-3 text-xs text-gray-400 focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const url = `${import.meta.env.VITE_SUPABASE_URL || "https://ieijkjjyfgnnypfmieij.supabase.co"}/functions/v1/resend-webhook`;
-                    navigator.clipboard.writeText(url);
-                    setCopied(true);
-                    toast.success("Webhook URL copied to clipboard!");
-                    setTimeout(() => setCopied(false), 2000);
-                  }}
-                  className="px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-center transition-all"
-                  title="Copy URL"
-                >
-                  {copied ? <Check className="w-4 h-4 text-[#39FF14]" /> : <Copy className="w-4 h-4 text-white" />}
-                </button>
-              </div>
-              <p className="text-[10px] text-gray-500">
-                Register this endpoint URL in your Resend Dashboard under <strong className="text-white">Webhooks</strong> to receive events.
-              </p>
-            </div>
-
-            {/* Resend API Key */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                Resend API Key
-              </label>
-              <div className="relative">
-                <input
-                  type={showApiKey ? "text" : "password"}
-                  value={resendApiKey}
-                  onChange={(e) => setResendApiKey(e.target.value)}
-                  placeholder="re_..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white focus:outline-none focus:border-[#39FF14] transition-all font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                >
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-[11px] text-gray-500 mt-2">
-                Your Resend API Key, used to authenticate email-sending calls from edge functions.
-              </p>
-            </div>
-
-            {/* Resend Sender Email */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                Resend Sender Email (From Address)
-              </label>
-              <input
-                type="email"
-                value={resendFromEmail}
-                onChange={(e) => setResendFromEmail(e.target.value)}
-                placeholder="noreply@tripmobility.ph"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#39FF14] transition-all"
-              />
-              <p className="text-[11px] text-gray-500 mt-2">
-                The authenticated domain email address to send outbound system notifications from.
-              </p>
-            </div>
-
-            {/* Signing Secret */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                Resend Webhook Signing Secret
-              </label>
-              <div className="relative">
-                <input
-                  type={showSecret ? "text" : "password"}
-                  value={webhookSecret}
-                  onChange={(e) => setWebhookSecret(e.target.value)}
-                  placeholder="whsec_..."
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-4 pr-12 py-3 text-sm text-white focus:outline-none focus:border-[#39FF14] transition-all font-mono"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowSecret(!showSecret)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-                >
-                  {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <p className="text-[11px] text-gray-500 mt-2">
-                This secret is provided by Resend when you create the webhook. It is used to verify that requests are legitimately sent by Resend.
-              </p>
-            </div>
-
-            {/* Save Button */}
-            <div className="pt-4 border-t border-white/5 flex justify-end">
-              <button
-                onClick={handleSaveIntegrations}
-                disabled={saving === "integrations"}
-                className="flex items-center gap-2 px-6 py-3 bg-[#39FF14] hover:bg-[#39FF14]/90 text-black text-xs font-bold uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                {saving === "integrations" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                Save Settings
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

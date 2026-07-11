@@ -29,10 +29,7 @@ import AdminContacts from "@/pages/admin/AdminContacts";
 import AdminChat from "@/pages/admin/AdminChat";
 import AdminAppointments from "@/pages/admin/AdminAppointments";
 import AdminSystemSettings from "@/pages/admin/AdminSystemSettings";
-import AdminCMS from "@/pages/admin/AdminCMS";
-import AdminMedia from "@/pages/admin/AdminMedia";
-import AdminMarketing from "@/pages/admin/AdminMarketing";
-import AdminSEO from "@/pages/admin/AdminSEO";
+
 import CustomerDashboard from "@/pages/customer/CustomerDashboard";
 import ComparePage from "@/pages/ComparePage";
 import NotFound from "@/pages/NotFound";
@@ -139,10 +136,7 @@ export default function App() {
             <Route path="appointments" element={<AdminAppointments />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="settings" element={<AdminSystemSettings />} />
-            <Route path="cms" element={<AdminCMS />} />
-            <Route path="media" element={<AdminMedia />} />
-            <Route path="marketing" element={<AdminMarketing />} />
-            <Route path="seo" element={<AdminSEO />} />
+
           </Route>
         </Route>
 

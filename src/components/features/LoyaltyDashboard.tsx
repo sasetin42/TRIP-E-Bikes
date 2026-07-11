@@ -5,7 +5,7 @@ import {
   CheckCircle, X, Package, Wrench, Tag
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
+import { supabase } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { Link } from "react-router-dom";
 
@@ -65,39 +65,26 @@ export default function LoyaltyDashboard() {
     if (!customer) return;
     setLoading(true);
 
-    const [settingRes, loyaltyRes] = await Promise.all([
-      apiClient.get("/settings.php"),
-      apiClient.get(`/loyalty.php?email=${customer.email}`),
+    const [settingRes, pointsRes, rewardsRes, redemptionsRes, codeRes] = await Promise.all([
+      supabase.from("system_settings").select("value").eq("key", "loyalty_program_enabled").single(),
+      supabase.from("loyalty_points").select("*").eq("customer_id", customer.id).order("created_at", { ascending: false }),
+      supabase.from("loyalty_rewards").select("*").eq("available", true).order("sort_order"),
+      supabase.from("reward_redemptions").select("*, loyalty_rewards(name, reward_type)").eq("customer_id", customer.id).order("created_at", { ascending: false }),
+      supabase.from("referral_codes").select("code").eq("customer_id", customer.id).single(),
     ]);
 
-    if (settingRes.data && Array.isArray(settingRes.data)) {
-      const loyaltySetting = settingRes.data.find((s: any) => s.key === "loyalty_program_enabled");
-      setLoyaltyEnabled(loyaltySetting ? loyaltySetting.value !== false : true);
-    }
-    
-    if (loyaltyRes.data) {
-      setPoints(loyaltyRes.data.points_history || []);
-      setRewards(loyaltyRes.data.rewards || []);
-      
-      // Adapt reward redemption names if needed
-      const redemptionsMapped = (loyaltyRes.data.redemptions || []).map((red: any) => ({
-        ...red,
-        id: String(red.id),
-        loyalty_rewards: {
-          name: red.reward_name,
-          reward_type: red.reward_type
-        }
-      }));
-      setRedemptions(redemptionsMapped);
+    setLoyaltyEnabled(settingRes.data?.value !== false);
+    setPoints(pointsRes.data || []);
+    setRewards(rewardsRes.data || []);
+    setRedemptions(redemptionsRes.data || []);
 
-      if (loyaltyRes.data.referral_code) {
-        setReferralCode(loyaltyRes.data.referral_code);
-      } else {
-        // Generate referral code
-        const code = `TRIP-${customer.username?.slice(0, 4).toUpperCase() || "USER"}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-        await apiClient.post("/loyalty.php?action=create_referral", { email: customer.email, code });
-        setReferralCode(code);
-      }
+    if (codeRes.data?.code) {
+      setReferralCode(codeRes.data.code);
+    } else {
+      // Generate referral code
+      const code = `TRIP-${customer.username?.slice(0, 4).toUpperCase() || "USER"}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      await supabase.from("referral_codes").insert({ customer_id: customer.id, code });
+      setReferralCode(code);
     }
     setLoading(false);
   }, [customer]);
@@ -108,13 +95,16 @@ export default function LoyaltyDashboard() {
     if (totalPoints < reward.points_cost) { toast.error("Insufficient points"); return; }
     setRedeeming(reward.id);
     const code = `REDEEM-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const { error } = await apiClient.post("/loyalty.php?action=redeem_reward", {
-      email: customer!.email,
+    const { error } = await supabase.from("reward_redemptions").insert({
+      customer_id: customer!.id,
       reward_id: reward.id,
-      code,
+      points_used: reward.points_cost,
+      status: "pending",
+      redemption_code: code,
     });
     if (error) { toast.error(error.message); }
     else {
+      await supabase.from("loyalty_points").insert({ customer_id: customer!.id, points: reward.points_cost, action_type: "redeemed", reason: `Redeemed: ${reward.name}` });
       toast.success(`Redeemed! Your code: ${code}`);
       fetchAll();
     }

@@ -1,7 +1,5 @@
 import { useEffect } from "react";
-import { auth, db } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
@@ -10,40 +8,29 @@ export default function AuthInitializer() {
   const { login: customerLogin, logout: customerLogout, setLoading: setCustomerLoading } = useCustomerAuth();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Fetch additional profile data from Firestore
-        let role = firebaseUser.email?.endsWith("@tripmobility.ph") ? "admin" : "customer";
-        let username = firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "";
-        let avatar = firebaseUser.photoURL || "";
+    let mounted = true;
 
-        try {
-          const profileSnap = await getDoc(doc(db, "profiles", firebaseUser.uid));
-          if (profileSnap.exists()) {
-            const data = profileSnap.data();
-            if (data.role) role = data.role;
-            if (data.username) username = data.username;
-            if (data.avatar) avatar = data.avatar;
-          }
-        } catch (err) {
-          console.warn("Failed to fetch user profile:", err);
-        }
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setAdminLoading(false);
+      setCustomerLoading(false);
+      adminLogout();
+      customerLogout();
+      return;
+    }
 
-        const user = {
-          id: firebaseUser.uid,
-          email: firebaseUser.email || "",
-          username,
-          avatar,
-          role,
-        };
-
-        const isAdmin = role === "admin" || role === "super_admin";
+    apiClient.get("/auth.php").then(({ data, error }) => {
+      if (!mounted) return;
+      if (!error && data && data.user) {
+        const user = data.user;
+        const isAdmin = user.role === "admin" || user.role === "super_admin";
         if (isAdmin) {
           adminLogin(user);
         } else {
           customerLogin(user);
         }
       } else {
+        localStorage.removeItem("token");
         adminLogout();
         customerLogout();
       }
@@ -51,8 +38,11 @@ export default function AuthInitializer() {
       setCustomerLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      mounted = false;
+    };
   }, [adminLogin, adminLogout, customerLogin, customerLogout, setAdminLoading, setCustomerLoading]);
 
   return null;
 }
+

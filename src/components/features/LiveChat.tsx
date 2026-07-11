@@ -3,52 +3,8 @@ import {
   MessageCircle, X, Send, Minimize2, Maximize2, Zap,
   Loader2, CheckCircle, Bot, User, Clock, Star
 } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc, updateDoc, query, where, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
+import { apiClient } from "@/lib/api-client";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
-
-function getLocalBotResponse(message: string): string {
-  const msg = message.toLowerCase();
-  
-  if (msg.includes("models") || msg.includes("offer") || msg.includes("catalog") || msg.includes("bikes") || msg.includes("bike") || msg.includes("product")) {
-    if (msg.includes("cargo")) {
-      return "The **TRIP Cargo Pro** (₱65,000) is built for delivery and last-mile logistics. It has a dual 48V 11.6Ah battery (100–120 km range), 500W motor, 45 km/h top speed, and can carry up to 180 kg. It comes with a heavy-duty rear rack.";
-    }
-    if (msg.includes("fold") || msg.includes("commuter") || msg.includes("urban")) {
-      return "The **TRIP Fold X** (₱57,000) is our aerospace aluminum folding e-bike. It folds in 5 seconds, weighs 24 kg, offers a 40–50 km range, and reaches 40 km/h. Perfect for multi-modal transport and urban commuting!";
-    }
-    if (msg.includes("ranger") || msg.includes("mountain") || msg.includes("off-road")) {
-      return "The **TRIP Ranger 750** (₱59,000) is our mountain/off-road fat-tire e-bike. It features a high-torque 750W motor, full suspension fork, hydraulic disc brakes, and reaches up to 50 km/h.";
-    }
-    return "We offer three premium e-bike models:\n\n1. **TRIP Cargo Pro** (₱65,000) - For delivery and last-mile courier services.\n2. **TRIP Fold X** (₱57,000) - Folding, lightweight urban commuter.\n3. **TRIP Ranger 750** (₱59,000) - All-terrain mountain e-bike.\n\nWhich one are you most interested in?";
-  }
-
-  if (msg.includes("quote") || msg.includes("quotation")) {
-    return "You can request a custom quotation directly on our website! Just close this chat window and click the **Get a Quote** button in the header navigation or the products section to enter your specifications.";
-  }
-
-  if (msg.includes("service") || msg.includes("center") || msg.includes("repair") || msg.includes("mandaluyong") || msg.includes("location") || msg.includes("store")) {
-    return "We have 6 nationwide service centers:\n\n* **Mandaluyong City**: 123 Electric Avenue\n* **Quezon City**: 456 E-Mobility Blvd\n* **Cebu City**: 789 Green Transport Hub\n* **Davao City**: 321 Clean Energy Park\n* **Iloilo City**: 654 Eco Transport Zone\n* **Pampanga (Clark)**: 987 Angeles City Tech Park\n\nYou can book a service appointment online on our Services page.";
-  }
-
-  if (msg.includes("warranty")) {
-    return "TRIP E-Bikes come with a premium warranty:\n\n* **Frame**: 3 years\n* **Motor & Electrical**: 1 year\n* **Battery**: 1 year\n* **Components & Brakes**: 6 months";
-  }
-
-  if (msg.includes("fleet") || msg.includes("bulk") || msg.includes("business") || msg.includes("corporate")) {
-    return "For fleet or corporate inquiries, we offer attractive volume discounts for 5+ units. Please send your requirements through our Quotation form or email us at **sales@tripmobility.ph**!";
-  }
-
-  if (msg.includes("financing") || msg.includes("payment") || msg.includes("installment")) {
-    return "Yes, we support flexible financing options and payment plans for both retail and corporate customers. Please contact our sales team at **+63 2 8123 4567** or request a quote for more details.";
-  }
-
-  if (msg.includes("hello") || msg.includes("hi") || msg.includes("hey")) {
-    return "Hello! How can I help you today? Ask me about our e-bike models, service center locations, or warranty coverage.";
-  }
-
-  return "Thanks for your message! I'm here to help. You can ask me about e-bike specs (Cargo Pro, Fold X, Ranger 750), pricing, store locations, or how to get a custom quote.";
-}
 
 interface ChatMessage {
   id: string;
@@ -94,73 +50,52 @@ export default function LiveChat() {
   const [aiTyping, setAiTyping] = useState(false);
   const [convHistory, setConvHistory] = useState<ConvTurn[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Check if chat is enabled
   useEffect(() => {
-    getDoc(doc(db, "system_settings", "chat_enabled"))
-      .then((docSnap) => {
-        if (docSnap.exists()) {
-          const val = docSnap.data().value;
-          setChatEnabled(val === "true" || val === true || val === "1");
-        }
-      })
-      .catch(() => {});
+    apiClient.get("/settings.php").then(({ data }) => {
+      if (data && Array.isArray(data)) {
+        const chatSetting = data.find((s: any) => s.key === "chat_enabled");
+        if (chatSetting) setChatEnabled(chatSetting.value !== false);
+      }
+    });
   }, []);
 
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   useEffect(() => { if (open && !minimized) scrollToBottom(); }, [messages, open, minimized]);
 
-  // Realtime subscription setup
-  useEffect(() => {
+  const fetchMessages = useCallback(async () => {
     if (!sessionId) return;
-
-    const q = query(
-      collection(db, "chat_messages"),
-      where("session_id", "==", sessionId),
-      orderBy("created_at", "asc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map((docSnap) => {
-        const m = docSnap.data();
-        return {
-          id: docSnap.id,
-          session_id: m.session_id,
-          sender_type: m.sender === "user" ? "customer" : m.sender,
-          sender_name: m.sender === "user" ? "You" : (m.sender === "bot" ? "TRIP AI" : "Agent"),
-          message: m.message,
-          read: m.read === 1 || m.read === true,
-          created_at: m.created_at instanceof Timestamp ? m.created_at.toDate().toISOString() : m.created_at,
-        };
-      });
-      setMessages(msgs);
+    const { data } = await apiClient.get(`/chat.php?session_id=${sessionId}`);
+    if (data && data.messages) {
+      const mapped = data.messages.map((m: any) => ({
+        ...m,
+        id: String(m.id),
+        sender_type: m.sender_type === "user" ? "customer" : m.sender_type,
+        sender_name: m.sender_type === "user" ? "You" : (m.sender_type === "bot" ? "TRIP AI" : "Agent"),
+        read: m.read === 1 || m.read === true
+      }));
+      setMessages(mapped);
       if (!open || minimized) {
-        const unread = msgs.filter((m: any) => m.sender_type !== "customer" && !m.read).length;
+        const unread = mapped.filter((m: any) => m.sender_type !== "customer" && !m.read).length;
         setUnreadCount(unread);
       }
-    }, (err) => {
-      console.warn("Messages snapshot error:", err);
-    });
-
-    return () => unsubscribe();
+    }
   }, [sessionId, open, minimized]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    fetchMessages();
+    pollRef.current = setInterval(fetchMessages, 3000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [fetchMessages, sessionId]);
 
   useEffect(() => {
     if (open && !minimized && sessionId) {
       setUnreadCount(0);
-      // Mark messages as read by updating docs
-      getDocs(
-        query(
-          collection(db, "chat_messages"),
-          where("session_id", "==", sessionId),
-          where("sender", "!=", "user")
-        )
-      ).then((snap) => {
-        snap.forEach((docSnap) => {
-          updateDoc(docSnap.ref, { read: true });
-        });
-      });
+      apiClient.post("/chat.php?action=read", { session_id: sessionId });
     }
   }, [open, minimized, sessionId]);
 
@@ -169,36 +104,39 @@ export default function LiveChat() {
     const email = customer?.email || guestEmail.trim() || null;
     const generatedId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     
-    try {
-      await setDoc(doc(db, "chat_sessions", generatedId), {
-        user_name: name,
-        user_email: email,
-        status: "active",
-        created_at: Timestamp.now(),
-        updated_at: Timestamp.now()
-      });
-      
-      setSessionId(generatedId);
-      setStarted(true);
-      setShowQuickActions(true);
-      
-      await addDoc(collection(db, "chat_messages"), {
-        session_id: generatedId,
-        sender: "bot",
-        message: BOT_WELCOME,
-        read: false,
-        created_at: Timestamp.now()
-      });
-    } catch (err) {
-      console.error("Failed to start chat session:", err);
-    }
+    const { data, error } = await apiClient.post("/chat.php?action=create_session", {
+      session_id: generatedId,
+      user_name: name,
+      user_email: email
+    });
+    if (error || !data) return;
+    
+    setSessionId(generatedId);
+    setStarted(true);
+    setShowQuickActions(true);
+    
+    await apiClient.post("/chat.php", {
+      session_id: generatedId,
+      sender: "bot",
+      message: BOT_WELCOME
+    });
+    
+    await fetchMessages();
   };
 
   const getAIResponse = async (userMessage: string, history: ConvTurn[]) => {
     setAiTyping(true);
-    await new Promise((resolve) => setTimeout(resolve, 800 + Math.random() * 800)); // Simulate networking delay
+    const { data, error } = await apiClient.post("/ai-chat-bot.php", {
+      message: userMessage,
+      conversation_history: history,
+    });
+
     setAiTyping(false);
-    return getLocalBotResponse(userMessage);
+    if (error) {
+      console.error("AI chat error:", error.message);
+      return null;
+    }
+    return data?.reply || null;
   };
 
   const sendMessage = async (msgOverride?: string) => {
@@ -208,42 +146,30 @@ export default function LiveChat() {
     setShowQuickActions(false);
     setSending(true);
 
-    try {
-      // Insert customer message
-      await addDoc(collection(db, "chat_messages"), {
+    // Insert customer message
+    await apiClient.post("/chat.php", {
+      session_id: sessionId,
+      sender: "user",
+      message: msg
+    });
+    
+    await fetchMessages();
+    setSending(false);
+
+    // Build conversation history for AI (last 6 turns)
+    const currentHistory = [...convHistory, { role: "user" as const, content: msg }];
+    const trimmedHistory = currentHistory.slice(-12); // last 6 exchanges
+
+    // Get AI response
+    const aiReply = await getAIResponse(msg, trimmedHistory.slice(0, -1));
+    if (aiReply) {
+      await apiClient.post("/chat.php", {
         session_id: sessionId,
-        sender: "user",
-        message: msg,
-        read: false,
-        created_at: Timestamp.now()
+        sender: "bot",
+        message: aiReply
       });
-      
-      // Update session's updated_at
-      await updateDoc(doc(db, "chat_sessions", sessionId), {
-        updated_at: Timestamp.now()
-      });
-      
-      setSending(false);
-
-      // Build conversation history for AI (last 6 turns)
-      const currentHistory = [...convHistory, { role: "user" as const, content: msg }];
-      const trimmedHistory = currentHistory.slice(-12); // last 6 exchanges
-
-      // Get AI response
-      const aiReply = await getAIResponse(msg, trimmedHistory.slice(0, -1));
-      if (aiReply) {
-        await addDoc(collection(db, "chat_messages"), {
-          session_id: sessionId,
-          sender: "bot",
-          message: aiReply,
-          read: false,
-          created_at: Timestamp.now()
-        });
-        setConvHistory([...trimmedHistory, { role: "assistant" as const, content: aiReply }]);
-      }
-    } catch (err) {
-      console.error("Failed to send chat message:", err);
-      setSending(false);
+      setConvHistory([...trimmedHistory, { role: "assistant" as const, content: aiReply }]);
+      await fetchMessages();
     }
   };
 
@@ -362,7 +288,7 @@ export default function LiveChat() {
                     )}
                     {customer && (
                       <div className="flex items-center gap-2 px-3 py-2.5 bg-[#39FF14]/5 border border-[#39FF14]/15 rounded-xl mb-4 w-full">
-                        <div className="w-7 h-7 rounded-full bg-[#39FF14]/15 flex items-center justify-center font-bold text-[#39FF14] text-xs">{(customer.username || "U")[0].toUpperCase()}</div>
+                        <div className="w-7 h-7 rounded-full bg-[#39FF14]/15 flex items-center justify-center font-bold text-[#39FF14] text-xs">{customer.username[0].toUpperCase()}</div>
                         <div className="text-left">
                           <p className="text-xs text-white font-semibold">{customer.username}</p>
                           <p className="text-[10px] text-gray-500">Logged in · Priority support</p>
@@ -386,7 +312,7 @@ export default function LiveChat() {
                         <div key={msg.id} className={`flex gap-2 ${isCustomer ? "flex-row-reverse" : "flex-row"} ${!showAvatar ? (isCustomer ? "pr-10" : "pl-10") : ""}`}>
                           {!isCustomer && showAvatar && (
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-auto ${isBot ? "bg-[#39FF14]/10 border border-[#39FF14]/20 text-[#39FF14]" : "bg-white/8 border border-white/15 text-white"}`}>
-                              {isBot ? <Bot className="w-4 h-4" /> : (msg.sender_name || "?")[0]?.toUpperCase()}
+                              {isBot ? <Bot className="w-4 h-4" /> : msg.sender_name[0]?.toUpperCase()}
                             </div>
                           )}
                           <div className="max-w-[78%] space-y-1">
