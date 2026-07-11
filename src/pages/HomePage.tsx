@@ -4,8 +4,7 @@ import { Link } from "react-router-dom";
 import {
   Zap, ChevronDown, ArrowRight, Play, Star, Battery, Gauge, Award,
   Leaf, Shield, Users, TrendingUp, CheckCircle, Quote, Landmark,
-  Compass, GraduationCap, Truck, MapPin, Dumbbell, Coins, Smile,
-  SquareParking
+  Compass, GraduationCap, Truck
 } from "lucide-react";
 import heroBike from "@/assets/hero-bike.jpg";
 import particleBg from "@/assets/particle-bg.jpg";
@@ -98,14 +97,14 @@ export default function HomePage() {
         <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-24 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/5 mb-8 animate-fade-up">
             <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" />
-            <span className="text-xs text-[#39FF14] font-medium tracking-widest uppercase">Introducing TRIP BIKES</span>
+            <span className="text-xs text-[#39FF14] font-medium tracking-widest uppercase">Philippines' #1 Premium E-Bike Brand</span>
           </div>
 
           <h1 className="font-orbitron font-black text-5xl sm:text-6xl lg:text-8xl text-white mb-6 leading-tight animate-fade-up">
             RIDE THE{" "}
             <span className="gradient-text">FUTURE.</span>
             <br />
-            A NEW KIND OF <span className="gradient-text">TRIP.</span>
+            OWN THE ROAD.
           </h1>
 
           <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-up">
@@ -145,73 +144,62 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── WHY TRIP / EXPLORE E-BIKES ── */}
+      {/* ── WHY TRIP ── */}
       <section className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-section-gradient" />
         <div className="relative max-w-7xl mx-auto px-6">
           <SectionObserver>
             <div className="text-center mb-16">
-              <p className="section-label mb-3">Explore Possibilities Of E-Bikes</p>
-              <h2 className="font-orbitron font-bold text-3xl sm:text-4xl lg:text-5xl text-white max-w-4xl mx-auto leading-tight">
-                E-Bikes Give You Everything You Need In Your <span className="gradient-text">Daily Lives</span>
+              <p className="section-label mb-3">Why Choose TRIP</p>
+              <h2 className="font-orbitron font-bold text-4xl sm:text-5xl text-white">
+                Built Different. Built{" "}
+                <span className="gradient-text">Better.</span>
               </h2>
             </div>
           </SectionObserver>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                icon: MapPin,
-                title: "Convenience",
-                desc: "Effortlessly zip around the city with E-bikes.",
+                icon: Zap,
+                title: "Premium Performance",
+                desc: "500W–750W motors with enterprise-grade components. Every TRIP bike undergoes 72-point quality checks before delivery.",
               },
               {
-                icon: Dumbbell,
-                title: "Health and Fitness",
-                desc: "Improve your health without breaking a sweat on E-bikes.",
+                icon: Battery,
+                title: "Longest Range",
+                desc: "Dual-battery systems deliver up to 120km per charge — the longest range in its class for Philippine conditions.",
+              },
+              {
+                icon: Shield,
+                title: "3-Year Warranty",
+                desc: "Industry-leading warranty coverage with nationwide service centers and genuine spare parts guaranteed.",
+              },
+              {
+                icon: TrendingUp,
+                title: "Proven ROI",
+                desc: "Clients report 80% reduction in fuel costs. Average ROI achieved within 4–6 months of fleet deployment.",
               },
               {
                 icon: Leaf,
-                title: "Environmentally Friendly",
-                desc: "Go green with zero-emission E-bikes.",
+                title: "Zero Emissions",
+                desc: "Each TRIP e-bike eliminates approximately 1.2 tons of CO₂ annually compared to petrol motorcycles.",
               },
               {
-                icon: Coins,
-                title: "Cost-effective",
-                desc: "Cheaper on maintenance, gas parking fees, and insurance costs with E-bikes.",
-              },
-              {
-                icon: SquareParking,
-                title: "Easy to Park",
-                desc: "Hassle-free parking with E-bikes. No need to find spots.",
-              },
-              {
-                icon: Smile,
-                title: "Less Stressful",
-                desc: "Ease your stress away from traffic and enjoy your ride with E-bikes.",
-              },
-              {
-                icon: Compass,
-                title: "Improved Mobility",
-                desc: "Improve your mobility with E-bikes.",
-              },
-              {
-                icon: Zap,
-                title: "Faster Travel Times",
-                desc: "Zoom past traffic with E-bikes. Arrive at your destination with ease.",
+                icon: Award,
+                title: "After-Sales Excellence",
+                desc: "Dedicated support team, same-day spare parts delivery, and nationwide service network across the Philippines.",
               },
             ].map((feature, i) => (
-              <SectionObserver key={i} delay={i * 80} className="h-full">
-                <div className="glow-card group">
-                  <div className="relative z-10 p-6 flex flex-col h-full">
-                    <div className="w-12 h-12 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center mb-4 group-hover:bg-[#39FF14]/20 transition-colors">
-                      <feature.icon className="w-6 h-6 text-[#39FF14]" />
-                    </div>
-                    <h3 className="font-orbitron font-bold text-base text-white mb-2 group-hover:text-[#39FF14] transition-colors uppercase tracking-wide">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">{feature.desc}</p>
+              <SectionObserver key={i} delay={i * 100}>
+                <div className="glass rounded-xl p-6 border border-white/5 hover:border-[#39FF14]/30 transition-all duration-500 group h-full">
+                  <div className="w-12 h-12 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center mb-4 group-hover:bg-[#39FF14]/20 transition-colors">
+                    <feature.icon className="w-6 h-6 text-[#39FF14]" />
                   </div>
+                  <h3 className="font-orbitron font-bold text-lg text-white mb-2 group-hover:text-[#39FF14] transition-colors">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{feature.desc}</p>
                 </div>
               </SectionObserver>
             ))}
@@ -239,7 +227,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {PRODUCTS.map((product, i) => (
-              <SectionObserver key={product.id} delay={i * 150} className="h-full">
+              <SectionObserver key={product.id} delay={i * 150}>
                 <ProductCard
                   product={product}
                   onQuote={() => handleProductQuote(product.name)}
@@ -428,7 +416,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {MOCK_TESTIMONIALS.map((t, i) => (
-              <SectionObserver key={t.id} delay={i * 100} className="h-full">
+              <SectionObserver key={t.id} delay={i * 100}>
                 <div className="glass rounded-xl p-6 border border-white/5 hover:border-[#39FF14]/20 transition-all h-full flex flex-col">
                   <Quote className="w-6 h-6 text-[#39FF14]/40 mb-3" />
                   <p className="text-gray-300 text-sm leading-relaxed mb-6 flex-1">{t.review}</p>
@@ -466,7 +454,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {FINANCING_OPTIONS.map((option, i) => (
-              <SectionObserver key={option.id} delay={i * 120} className="h-full">
+              <SectionObserver key={option.id} delay={i * 120}>
                 <div
                   className={`rounded-2xl p-8 h-full flex flex-col transition-all duration-500 ${
                     option.highlight

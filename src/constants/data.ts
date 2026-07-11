@@ -237,14 +237,27 @@ export const MOCK_TESTIMONIALS: Testimonial[] = [
 
 export const ADMIN_USERS: AdminUser[] = [
   {
-    id: "JYlaSFfSxaNH4O7acxnlegRahLG2",
-    name: "Super Admin",
-    email: "admin@gmail.com",
+    id: "u-001",
+    name: "Miguel Torres",
+    email: "miguel@tripmobility.ph",
     role: "super_admin",
-    lastActive: new Date().toISOString(),
+    lastActive: "2026-07-06T08:00:00Z",
+  },
+  {
+    id: "u-002",
+    name: "Carlos Reyes",
+    email: "carlos@tripmobility.ph",
+    role: "sales_manager",
+    lastActive: "2026-07-06T07:30:00Z",
+  },
+  {
+    id: "u-003",
+    name: "Ana Lim",
+    email: "ana@tripmobility.ph",
+    role: "sales_agent",
+    lastActive: "2026-07-05T18:00:00Z",
   },
 ];
-
 
 export const INDUSTRIES = [
   {

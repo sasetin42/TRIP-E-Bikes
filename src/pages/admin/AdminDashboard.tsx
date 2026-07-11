@@ -9,8 +9,6 @@ import { apiClient } from "@/lib/api-client";
 import { PRODUCTS } from "@/constants/products";
 import type { LeadStatus } from "@/types";
 
-import { MOCK_LEADS } from "@/constants/data";
-
 interface DbLead {
   id: string;
   name: string;
@@ -24,19 +22,6 @@ interface DbLead {
   created_at: string;
 }
 
-const mappedMockLeads: DbLead[] = MOCK_LEADS.map(l => ({
-  id: l.id,
-  name: l.name,
-  email: l.email,
-  company: l.company || null,
-  product_interest: l.productInterest,
-  quantity: l.quantity,
-  status: l.status,
-  score: l.score,
-  budget: l.budget || null,
-  created_at: l.createdAt
-}));
-
 const PIPELINE_STAGES = [
   { key: "new" as LeadStatus, label: "New", color: "bg-blue-500" },
   { key: "contacted" as LeadStatus, label: "Contacted", color: "bg-indigo-500" },
@@ -48,8 +33,8 @@ const PIPELINE_STAGES = [
 ];
 
 export default function AdminDashboard() {
-  const [leads, setLeads] = useState<DbLead[]>(mappedMockLeads);
-  const [loading, setLoading] = useState(false);
+  const [leads, setLeads] = useState<DbLead[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
@@ -57,11 +42,9 @@ export default function AdminDashboard() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     const { data, error } = await apiClient.get("/leads.php");
-    if (!error && data && data.length > 0) {
+    if (!error && data) {
       setLeads(data);
       setLastRefresh(new Date());
-    } else if (error) {
-      console.warn("Failed to fetch live leads, using cached mock data.", error);
     }
     if (!silent) setLoading(false);
     else setRefreshing(false);
@@ -192,7 +175,7 @@ export default function AdminDashboard() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-[#39FF14]/10 flex items-center justify-center font-bold text-[#39FF14] text-xs border border-[#39FF14]/20">
-                          {(lead.name || "?")[0]}
+                          {lead.name[0]}
                         </div>
                         <div>
                           <p className="text-sm font-medium text-white">{lead.name}</p>

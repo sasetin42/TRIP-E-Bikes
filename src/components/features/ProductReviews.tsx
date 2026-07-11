@@ -4,7 +4,7 @@ import {
   CheckCircle, MessageSquare, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
+import { supabase } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface Review {
@@ -42,11 +42,17 @@ export default function ProductReviews({ productId, productName, onRequestAuth }
 
   const fetchReviews = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await apiClient.get(`/products.php?action=reviews&product_id=${productId}`);
-    if (!error && data && data.reviews) {
-      const enriched = data.reviews.map((r: any) => ({
+    // Join with user_profiles to get usernames
+    const { data, error } = await supabase
+      .from("product_reviews")
+      .select("*, user_profiles!customer_id(username)")
+      .eq("product_id", productId)
+      .order("created_at", { ascending: false });
+
+    if (!error) {
+      const enriched = (data || []).map((r: any) => ({
         ...r,
-        username: r.reviewer_name || "Anonymous",
+        username: r.user_profiles?.username || "Anonymous",
       }));
       setReviews(enriched);
     }
@@ -56,14 +62,14 @@ export default function ProductReviews({ productId, productName, onRequestAuth }
   // Check if customer has approved quotation for this product (verified purchase)
   const checkCanReview = useCallback(async () => {
     if (!customer) return;
-    const { data } = await apiClient.get(`/quotations.php?email=${customer.email}`);
-    if (data && data.quotations) {
-      const hasQualifiedQuote = data.quotations.some((q: any) =>
-        q.product_id === productId && (q.status === "approved" || q.status === "completed" || q.status === "accepted" || q.status === "sent")
-      );
-      setCanReview(hasQualifiedQuote);
-    }
-  }, [customer, productId]);
+    const { data } = await supabase
+      .from("quotations")
+      .select("id")
+      .eq("customer_id", customer.id)
+      .in("status", ["approved", "completed"])
+      .limit(1);
+    setCanReview((data?.length || 0) > 0);
+  }, [customer]);
 
   useEffect(() => {
     fetchReviews();
@@ -77,23 +83,20 @@ export default function ProductReviews({ productId, productName, onRequestAuth }
 
     const payload = {
       product_id: productId,
-      reviewer_name: customer.username,
-      reviewer_email: customer.email,
+      customer_id: customer.id,
       rating,
       review_text: reviewText.trim(),
       verified_purchase: canReview,
     };
 
     if (editingReview) {
-      const { error } = await apiClient.put(`/products.php?action=reviews&id=${editingReview.id}`, {
-        rating,
-        review_text: reviewText.trim()
-      });
+      const { error } = await supabase.from("product_reviews").update({ rating, review_text: reviewText.trim() }).eq("id", editingReview.id);
       if (error) { toast.error(error.message); } else { toast.success("Review updated!"); }
     } else {
-      const { error } = await apiClient.post("/products.php?action=reviews", payload);
+      const { error } = await supabase.from("product_reviews").insert(payload);
       if (error) {
-        toast.error(error.message);
+        if (error.code === "23505") toast.error("You've already reviewed this product. Edit your existing review.");
+        else toast.error(error.message);
         setSubmitting(false);
         return;
       }
@@ -109,9 +112,10 @@ export default function ProductReviews({ productId, productName, onRequestAuth }
   };
 
   const handleHelpful = async (reviewId: string, currentCount: number) => {
-    const { error } = await apiClient.put(`/products.php?action=reviews&id=${reviewId}`, {
-      helpful_count: currentCount + 1
-    });
+    const { error } = await supabase
+      .from("product_reviews")
+      .update({ helpful_count: currentCount + 1 })
+      .eq("id", reviewId);
     if (!error) setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, helpful_count: r.helpful_count + 1 } : r));
   };
 
