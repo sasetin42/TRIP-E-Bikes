@@ -12,6 +12,7 @@ import { signOut, EmailAuthProvider, reauthenticateWithCredential, updatePasswor
 import { collection, query, where, getDocs, doc, setDoc, onSnapshot } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useAuth } from "@/hooks/useAuth";
+import NotificationBell from "@/components/features/NotificationBell";
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
@@ -320,14 +321,7 @@ export default function AdminLayout() {
             />
           </div>
           <div className="flex items-center gap-3 ml-auto">
-            <Link to="/admin/leads" className="relative w-9 h-9 flex items-center justify-center rounded-lg border border-white/10 text-gray-400 hover:border-[#39FF14]/30 hover:text-[#39FF14] transition-all">
-              <Bell className="w-4 h-4" />
-              {newLeadsCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#39FF14] rounded-full flex items-center justify-center text-[9px] font-black text-[#0A0A0A]">
-                  {newLeadsCount > 9 ? "9+" : newLeadsCount}
-                </span>
-              )}
-            </Link>
+            <NotificationBell isAdmin={true} />
             {/* User Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <button
@@ -372,6 +366,14 @@ export default function AdminLayout() {
                   >
                     <Settings className="w-3.5 h-3.5" />
                     Settings
+                  </Link>
+                  <Link
+                    to="/"
+                    onClick={() => setDropdownOpen(false)}
+                    className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    View Website
                   </Link>
                   <button
                     onClick={() => {

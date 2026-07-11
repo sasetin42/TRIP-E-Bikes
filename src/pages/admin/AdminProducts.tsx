@@ -4,7 +4,8 @@ import {
   Zap, Battery, Gauge, Package, Star, Tag, DollarSign,
   CheckCircle, ToggleLeft, ToggleRight, Grid3X3, List,
   Sparkles, Settings, RefreshCw, Search, Filter, TrendingUp,
-  BarChart3, MessageSquare, ThumbsUp, ThumbsDown, Reply, AlertCircle
+  BarChart3, MessageSquare, ThumbsUp, ThumbsDown, Reply, AlertCircle,
+  Info, Image, CircleDollarSign, Sliders
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
@@ -278,9 +279,12 @@ export default function AdminProducts() {
   const filteredReviews = reviews.filter(r => reviewFilter === "all" || r.moderation_status === reviewFilter);
 
   const SECTIONS = [
-    { id: "basic", label: "Basic Info" }, { id: "media", label: "Images & Gallery" },
-    { id: "pricing", label: "Pricing & Addons" }, { id: "specs", label: "Specifications" },
-    { id: "features", label: "Features & Use Cases" }, { id: "settings", label: "Settings" },
+    { id: "basic", label: "Basic Info", icon: Info },
+    { id: "media", label: "Images & Gallery", icon: Image },
+    { id: "pricing", label: "Pricing & Addons", icon: CircleDollarSign },
+    { id: "specs", label: "Specifications", icon: Sliders },
+    { id: "features", label: "Features & Use Cases", icon: Sparkles },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -591,15 +595,16 @@ export default function AdminProducts() {
 
       {/* ── PRODUCT EDITOR MODAL ── */}
       {showEditor && (
-        <div className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/90 backdrop-blur-xl p-4 pt-6">
-          <div className="relative w-full max-w-5xl rounded-2xl overflow-hidden"
-            style={{ background: "linear-gradient(145deg, #0F0F0F 0%, #0D0D0D 100%)", boxShadow: "0 40px 120px rgba(0,0,0,0.9), 0 0 0 1px rgba(57,255,20,0.15)" }}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-hidden bg-black/90 backdrop-blur-xl p-4">
+          <div className="w-full max-w-5xl neon-trail-border-container p-[2px] rounded-2xl overflow-hidden shadow-2xl">
+            <div className="relative w-full h-[85vh] max-h-[700px] flex flex-col rounded-[14px] overflow-hidden"
+              style={{ background: "linear-gradient(145deg, #0F0F0F 0%, #0D0D0D 100%)" }}>
 
             {/* Animated top bar */}
-            <div className="h-[2px] w-full bg-gradient-to-r from-[#39FF14] via-[#00FFFF] to-[#39FF14] animate-pulse" />
+            <div className="h-[2px] w-full bg-gradient-to-r from-[#39FF14] via-[#00FFFF] to-[#39FF14] animate-pulse shrink-0" />
 
             {/* Header */}
-            <div className="flex items-center justify-between px-8 py-5 border-b border-white/8">
+            <div className="flex items-center justify-between px-8 py-5 border-b border-white/8 shrink-0">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-[#39FF14]/15 border border-[#39FF14]/25 flex items-center justify-center">
                   {editing ? <Edit className="w-5 h-5 text-[#39FF14]" /> : <Plus className="w-5 h-5 text-[#39FF14]" />}
@@ -612,18 +617,38 @@ export default function AdminProducts() {
               <button onClick={() => setShowEditor(false)} className="w-9 h-9 flex items-center justify-center rounded-xl border border-white/10 text-gray-500 hover:text-white hover:border-white/30 transition-all"><X className="w-4 h-4" /></button>
             </div>
 
-            <div className="flex min-h-[600px]">
+            <div className="flex flex-1 min-h-0">
               {/* Section Nav */}
-              <div className="w-52 shrink-0 border-r border-white/5 py-4 bg-white/1">
-                {SECTIONS.map(s => (
-                  <button key={s.id} onClick={() => setActiveSection(s.id)}
-                    className={`w-full text-left px-5 py-3.5 text-xs font-semibold transition-all ${activeSection === s.id ? "text-[#39FF14] bg-[#39FF14]/8 border-r-2 border-[#39FF14]" : "text-gray-500 hover:text-gray-300 hover:bg-white/3"}`}>
-                    {s.label}
+              <div className="w-56 shrink-0 border-r border-white/5 bg-[#0C0C0C] flex flex-col justify-between p-4">
+                <div className="space-y-1">
+                  {SECTIONS.map(s => {
+                    const Icon = s.icon;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setActiveSection(s.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold transition-all ${
+                          activeSection === s.id
+                            ? "text-[#39FF14] bg-[#39FF14]/8 border border-[#39FF14]/20"
+                            : "text-gray-500 hover:text-gray-300 hover:bg-white/3"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span>{s.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-white/5">
+                  <button onClick={handleSave} disabled={saving} className="w-full btn-primary flex items-center justify-center gap-2 py-3 text-xs min-h-[40px] rounded-xl font-bold uppercase tracking-wider shadow-[0_0_20px_rgba(57,255,20,0.15)] whitespace-nowrap">
+                    <Save className="w-4 h-4" />
+                    <span>{saving ? "Saving..." : editing ? "Save Changes" : "Create Product"}</span>
                   </button>
-                ))}
+                </div>
               </div>
 
-              <div className="flex-1 p-8 space-y-6 overflow-y-auto max-h-[75vh]">
+              <div className="flex-1 p-8 space-y-6 overflow-y-auto">
                 {/* ── BASIC INFO ── */}
                 {activeSection === "basic" && (
                   <div className="space-y-5">
@@ -813,15 +838,10 @@ export default function AdminProducts() {
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-8 py-5 border-t border-white/8 flex gap-3 justify-end bg-white/1">
-              <button onClick={() => setShowEditor(false)} className="btn-outline text-sm px-5">Cancel</button>
-              <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-2">
-                <Save className="w-4 h-4" />{saving ? "Saving..." : editing ? "Save Changes" : "Create Product"}
-              </button>
-            </div>
+
           </div>
         </div>
+      </div>
       )}
     </div>
   );
