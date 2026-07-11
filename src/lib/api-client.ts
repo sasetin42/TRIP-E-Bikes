@@ -149,7 +149,7 @@ async function request<T = any>(
           ...body,
           updated_at: Timestamp.now()
         };
-        await updateDoc(docRef, payload);
+        await setDoc(docRef, payload, { merge: true });
         const docSnap = await getDoc(docRef);
         responseData = convertDoc(docSnap);
       } else if (method === "DELETE") {
@@ -207,7 +207,7 @@ async function request<T = any>(
           ...body,
           updated_at: Timestamp.now()
         };
-        await updateDoc(docRef, payload);
+        await setDoc(docRef, payload, { merge: true });
         const docSnap = await getDoc(docRef);
         responseData = convertDoc(docSnap);
       }
@@ -249,7 +249,7 @@ async function request<T = any>(
           ...body,
           updated_at: Timestamp.now()
         };
-        await updateDoc(docRef, payload);
+        await setDoc(docRef, payload, { merge: true });
         const docSnap = await getDoc(docRef);
         responseData = convertDoc(docSnap);
       }
@@ -274,7 +274,7 @@ async function request<T = any>(
         responseData = convertDoc(docSnap);
       } else if (method === "PUT") {
         const docRef = doc(db, "contact_messages", params.id);
-        await updateDoc(docRef, body);
+        await setDoc(docRef, body, { merge: true });
         const docSnap = await getDoc(docRef);
         responseData = convertDoc(docSnap);
       }
