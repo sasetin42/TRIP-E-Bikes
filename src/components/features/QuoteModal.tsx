@@ -80,6 +80,18 @@ export default function QuoteModal({ open, onClose, preselectedProduct }: QuoteM
     }
   }, [customer]);
 
+  // Disable body scrolling when modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   useEffect(() => {
     if (preselectedProduct && open) {
       setForm(f => ({ ...f, product: preselectedProduct }));

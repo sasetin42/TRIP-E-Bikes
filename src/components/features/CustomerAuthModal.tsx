@@ -59,6 +59,18 @@ export default function CustomerAuthModal({
     return { level: 1, label: "Weak", color: "bg-red-500", width: "30%" };
   };
 
+  // Disable body scrolling when modal is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   // Countdown tick
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -209,21 +221,25 @@ export default function CustomerAuthModal({
                 <p className="text-[11px] text-gray-400 mb-2.5">Explore the customer portal instantly — no personal email needed.</p>
                 <button
                   onClick={async () => {
-                    setLoading(true);
-                    const { data, error } = await apiClient.post("/auth.php?action=login", {
-                      email: "demo.customer@tripmobility.ph",
-                      password: "DemoTrip2026!",
-                    });
-                    if (error) {
+                    try {
+                      const userCredential = await signInWithEmailAndPassword(
+                        auth,
+                        "demo.customer@tripmobility.ph",
+                        "DemoTrip2026!"
+                      );
+                      const firebaseUser = userCredential.user;
+                      login(mapCustomer({
+                        id: firebaseUser.uid,
+                        email: firebaseUser.email || "",
+                        username: firebaseUser.email?.split("@")[0] || "Demo Customer"
+                      }));
+                      toast.success("Demo account loaded! Welcome.");
+                      onSuccess();
+                    } catch (e) {
                       toast.error("Demo login failed. Please use the sign-in form.");
                       setMode("login");
                       setEmail("demo.customer@tripmobility.ph");
                       setPassword("DemoTrip2026!");
-                    } else if (data && data.user && data.token) {
-                      localStorage.setItem("token", data.token);
-                      login(mapCustomer(data.user));
-                      toast.success("Demo account loaded! Welcome.");
-                      onSuccess();
                     }
                     setLoading(false);
                   }}
