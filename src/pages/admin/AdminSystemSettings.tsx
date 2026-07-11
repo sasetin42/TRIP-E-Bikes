@@ -1,17 +1,16 @@
 import { useState, useEffect, useCallback } from "react";
 import { 
-  Settings, Loader2, Save, ToggleLeft, ToggleRight, Shield, MessageCircle, Star, Gift, 
-  RefreshCw, Globe, Server, FileImage, ShieldAlert, Upload, Trash2, Key, Check
+  Settings, Loader2, Save, ToggleLeft, ToggleRight, Shield, MessageCircle, Star, Gift, RefreshCw,
+  Globe, Mail, Lock, Key, ShieldAlert, Upload, Image, Trash2
 } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
-import { storage, db } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { doc, setDoc } from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 
-interface SystemSetting {
+type TabType = "features" | "general" | "appearance" | "smtp" | "security";
+
+interface FeatureSetting {
   key: string;
-  value: any;
+  value: boolean;
   label: string;
   description: string;
 }
@@ -24,571 +23,457 @@ const FEATURE_ICONS: Record<string, any> = {
 };
 
 export default function AdminSystemSettings() {
-  const [activeTab, setActiveTab] = useState<"features" | "general" | "appearance" | "smtp" | "security">("features");
-  const [settings, setSettings] = useState<SystemSetting[]>([]);
+  const [activeTab, setActiveTab] = useState<TabType>("features");
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [featureSaving, setFeatureSaving] = useState<string | null>(null);
 
-  // Form states for non-feature tabs
-  const [generalForm, setGeneralForm] = useState({
-    site_title: "TRIP Mobility",
-    support_email: "support@tripmobility.ph",
-    support_phone: "+63 2 8123 4567",
-    default_currency: "PHP",
-    operating_status: "active"
-  });
+  const [features, setFeatures] = useState<FeatureSetting[]>([]);
+  
+  // General Info States
+  const [siteTitle, setSiteTitle] = useState("TRIP Mobility");
+  const [supportEmail, setSupportEmail] = useState("support@tripmobility.ph");
+  const [supportPhone, setSupportPhone] = useState("+63 2 8123 4567");
+  const [currency, setCurrency] = useState("PHP (₱)");
+  const [systemStatus, setSystemStatus] = useState("Operational");
 
-  const [appearanceForm, setAppearanceForm] = useState({
-    brand_logo_main: "",
-    brand_logo_dark: "",
-    brand_favicon: ""
-  });
+  // Appearance States
+  const [logoMain, setLogoMain] = useState("");
+  const [logoDark, setLogoDark] = useState("");
+  const [logoFavicon, setLogoFavicon] = useState("");
+  const [uploadingLogo, setUploadingLogo] = useState<string | null>(null);
 
-  const [smtpForm, setSmtpForm] = useState({
-    smtp_host: "smtp.resend.com",
-    smtp_port: "587",
-    smtp_user: "resend",
-    smtp_pass: "",
-    smtp_encryption: "TLS",
-    smtp_from_email: "no-reply@tripmobility.ph",
-    smtp_from_name: "TRIP Mobility"
-  });
+  // SMTP Settings
+  const [smtpHost, setSmtpHost] = useState("smtp.resend.com");
+  const [smtpPort, setSmtpPort] = useState("465");
+  const [smtpUser, setSmtpUser] = useState("resend");
+  const [smtpPass, setSmtpPass] = useState("");
+  const [smtpEncrypt, setSmtpEncrypt] = useState("TLS");
+  const [smtpFromEmail, setSmtpFromEmail] = useState("noreply@tripmobility.ph");
+  const [smtpFromName, setSmtpFromName] = useState("TRIP Mobility");
 
-  const [securityForm, setSecurityForm] = useState({
-    security_pw_policy: "medium",
-    security_mfa_enabled: "false",
-    security_session_timeout: "60",
-    security_rate_limit: "true"
-  });
+  // Security Settings
+  const [minPasswordLength, setMinPasswordLength] = useState("8");
+  const [requireSpecialChar, setRequireSpecialChar] = useState(true);
+  const [twoFactorRequired, setTwoFactorRequired] = useState(false);
+  const [sessionTimeout, setSessionTimeout] = useState("60");
+  const [ipLockout, setIpLockout] = useState("");
 
-  // Uploader states
-  const [uploading, setUploading] = useState<Record<string, boolean>>({});
-
-  const fetchSettings = useCallback(async () => {
+  const loadSettings = useCallback(async () => {
     setLoading(true);
-    try {
-      const { data, error } = await apiClient.get("/settings");
-      if (!error && data) {
-        setSettings(data);
-        
-        // Map settings array back into designated form states
-        const getVal = (key: string, fallback: string) => {
-          const item = data.find((s: any) => s.key === key);
-          return item ? String(item.value) : fallback;
-        };
-
-        setGeneralForm({
-          site_title: getVal("site_title", "TRIP Mobility"),
-          support_email: getVal("support_email", "support@tripmobility.ph"),
-          support_phone: getVal("support_phone", "+63 2 8123 4567"),
-          default_currency: getVal("default_currency", "PHP"),
-          operating_status: getVal("operating_status", "active")
-        });
-
-        setAppearanceForm({
-          brand_logo_main: getVal("brand_logo_main", ""),
-          brand_logo_dark: getVal("brand_logo_dark", ""),
-          brand_favicon: getVal("brand_favicon", "")
-        });
-
-        setSmtpForm({
-          smtp_host: getVal("smtp_host", "smtp.resend.com"),
-          smtp_port: getVal("smtp_port", "587"),
-          smtp_user: getVal("smtp_user", "resend"),
-          smtp_pass: getVal("smtp_pass", ""),
-          smtp_encryption: getVal("smtp_encryption", "TLS"),
-          smtp_from_email: getVal("smtp_from_email", "no-reply@tripmobility.ph"),
-          smtp_from_name: getVal("smtp_from_name", "TRIP Mobility")
-        });
-
-        setSecurityForm({
-          security_pw_policy: getVal("security_pw_policy", "medium"),
-          security_mfa_enabled: getVal("security_mfa_enabled", "false"),
-          security_session_timeout: getVal("security_session_timeout", "60"),
-          security_rate_limit: getVal("security_rate_limit", "true")
-        });
-      }
-    } catch (err) {
-      console.error("Failed to load settings:", err);
+    const { data, error } = await supabase.from("system_settings").select("*");
+    if (error) {
+      toast.error("Failed to load settings: " + error.message);
+      setLoading(false);
+      return;
     }
+
+    const featureList: FeatureSetting[] = [];
+    for (const row of (data || [])) {
+      const k = row.key;
+      const val = row.value;
+
+      if (k.endsWith("_enabled")) {
+        featureList.push({
+          key: k,
+          value: val === true || val === "true" || val === 1,
+          label: k.replace(/_enabled$/, "").replace(/_/g, " "),
+          description: row.description || `Toggle ${k.replace(/_/g, " ")} feature`,
+        });
+      } else {
+        const strVal = typeof val === "object" ? JSON.stringify(val) : String(val ?? "");
+        switch (k) {
+          case "site_title": setSiteTitle(strVal); break;
+          case "support_email": setSupportEmail(strVal); break;
+          case "support_phone": setSupportPhone(strVal); break;
+          case "currency": setCurrency(strVal); break;
+          case "system_status": setSystemStatus(strVal); break;
+          case "logo_main": setLogoMain(strVal); break;
+          case "logo_dark": setLogoDark(strVal); break;
+          case "logo_favicon": setLogoFavicon(strVal); break;
+          case "smtp_host": setSmtpHost(strVal); break;
+          case "smtp_port": setSmtpPort(strVal); break;
+          case "smtp_user": setSmtpUser(strVal); break;
+          case "smtp_pass": setSmtpPass(strVal); break;
+          case "smtp_encrypt": setSmtpEncrypt(strVal); break;
+          case "smtp_from_email": setSmtpFromEmail(strVal); break;
+          case "smtp_from_name": setSmtpFromName(strVal); break;
+          case "security_min_password": setMinPasswordLength(strVal); break;
+          case "security_require_special": setRequireSpecialChar(val === true || val === "true"); break;
+          case "security_mfa_required": setTwoFactorRequired(val === true || val === "true"); break;
+          case "security_session_timeout": setSessionTimeout(strVal); break;
+          case "security_ip_lockout": setIpLockout(strVal); break;
+        }
+      }
+    }
+
+    if (featureList.length === 0) {
+      featureList.push(
+        { key: "loyalty_program_enabled", value: true, label: "Loyalty Program", description: "Reward customers points on bookings & referrals" },
+        { key: "chat_enabled", value: true, label: "Live Chat Support", description: "Realtime support workspace for visitors" },
+        { key: "reviews_enabled", value: true, label: "Product Reviews", description: "Allow customers to write E-Bike review replies" },
+        { key: "referral_enabled", value: true, label: "Referral Tracking", description: "Generate dynamic sharing hashes for customers" }
+      );
+    }
+    setFeatures(featureList);
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+  useEffect(() => { loadSettings(); }, [loadSettings]);
 
-  const toggleFeatureSetting = async (key: string, currentValue: boolean) => {
-    setSaving(key);
+  const upsertSetting = async (key: string, value: any) => {
+    const { error } = await supabase.from("system_settings").upsert({
+      key,
+      value,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+  };
+
+  const saveSection = async () => {
+    setSaving(true);
+    try {
+      const payload: Record<string, any> = {};
+      if (activeTab === "general") {
+        payload.site_title = siteTitle;
+        payload.support_email = supportEmail;
+        payload.support_phone = supportPhone;
+        payload.currency = currency;
+        payload.system_status = systemStatus;
+      } else if (activeTab === "smtp") {
+        payload.smtp_host = smtpHost;
+        payload.smtp_port = smtpPort;
+        payload.smtp_user = smtpUser;
+        payload.smtp_pass = smtpPass;
+        payload.smtp_encrypt = smtpEncrypt;
+        payload.smtp_from_email = smtpFromEmail;
+        payload.smtp_from_name = smtpFromName;
+      } else if (activeTab === "security") {
+        payload.security_min_password = minPasswordLength;
+        payload.security_require_special = requireSpecialChar;
+        payload.security_mfa_required = twoFactorRequired;
+        payload.security_session_timeout = sessionTimeout;
+        payload.security_ip_lockout = ipLockout;
+      }
+
+      for (const [k, v] of Object.entries(payload)) {
+        await upsertSetting(k, v);
+      }
+      toast.success("Settings updated successfully.");
+    } catch (e: any) {
+      toast.error("Save failed: " + e.message);
+    }
+    setSaving(false);
+  };
+
+  const toggleFeature = async (key: string, currentValue: boolean) => {
+    setFeatureSaving(key);
     const newValue = !currentValue;
     try {
-      const { error } = await apiClient.put(`/settings?key=${key}`, { value: newValue });
-      if (error) {
-        toast.error("Failed to update setting: " + error.message);
-      } else {
-        setSettings(prev => prev.map(s => s.key === key ? { ...s, value: newValue } : s));
-        toast.success(`Feature ${newValue ? "enabled" : "disabled"}`);
-      }
+      await upsertSetting(key, newValue);
+      setFeatures((prev) => prev.map((f) => (f.key === key ? { ...f, value: newValue } : f)));
+      toast.success(`Feature updated successfully`);
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error("Failed to update feature: " + e.message);
     }
-    setSaving(null);
+    setFeatureSaving(null);
   };
 
-  const handleSaveForm = async (tabName: string, formData: Record<string, any>) => {
-    setSaving(tabName);
-    try {
-      const { error } = await apiClient.put("/settings", formData);
-      if (error) {
-        toast.error(`Failed to save ${tabName} settings: ` + error.message);
-      } else {
-        toast.success(`${tabName.toUpperCase()} settings saved successfully.`);
-        fetchSettings(); // Refresh settings state
-      }
-    } catch (err: any) {
-      toast.error(err.message);
-    }
-    setSaving(null);
-  };
-
-  const handleFileUpload = async (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAssetUpload = async (key: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    setUploading(prev => ({ ...prev, [key]: true }));
+    setUploadingLogo(key);
     try {
-      const fileRef = ref(storage, `brand-assets/${key}`);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
+      const ext = file.name.split(".").pop();
+      const path = `brand/${key}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("product-images")
+        .upload(path, file, { upsert: true });
+      if (uploadError) throw new Error(uploadError.message);
 
-      // Save to settings db
-      const { error } = await apiClient.put(`/settings?key=${key}`, { value: url });
-      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("product-images").getPublicUrl(path);
+      const url = urlData.publicUrl;
 
-      setAppearanceForm(prev => ({ ...prev, [key]: url }));
-      toast.success("Asset uploaded and saved successfully.");
+      await upsertSetting(key, url);
+      if (key === "logo_main") setLogoMain(url);
+      if (key === "logo_dark") setLogoDark(url);
+      if (key === "logo_favicon") setLogoFavicon(url);
+      toast.success("Brand asset uploaded successfully.");
     } catch (err: any) {
       toast.error("Upload failed: " + err.message);
     }
-    setUploading(prev => ({ ...prev, [key]: false }));
+    setUploadingLogo(null);
   };
 
-  const handleDeleteAsset = async (key: string) => {
-    setUploading(prev => ({ ...prev, [key]: true }));
+  const handleAssetDelete = async (key: string) => {
+    setUploadingLogo(key);
     try {
-      const fileRef = ref(storage, `brand-assets/${key}`);
-      try {
-        await deleteObject(fileRef);
-      } catch (e) {
-        console.warn("Storage object already deleted or missing:", e);
-      }
-
-      const { error } = await apiClient.put(`/settings?key=${key}`, { value: "" });
-      if (error) throw error;
-
-      setAppearanceForm(prev => ({ ...prev, [key]: "" }));
-      toast.success("Asset removed successfully.");
+      await upsertSetting(key, "");
+      if (key === "logo_main") setLogoMain("");
+      if (key === "logo_dark") setLogoDark("");
+      if (key === "logo_favicon") setLogoFavicon("");
+      toast.success("Brand asset deleted successfully.");
     } catch (err: any) {
       toast.error("Deletion failed: " + err.message);
     }
-    setUploading(prev => ({ ...prev, [key]: false }));
+    setUploadingLogo(null);
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="w-10 h-10 text-[#39FF14] animate-spin" />
+      <div className="flex justify-center py-20">
+        <Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      {/* Title Header */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-6">
+    <div className="space-y-8 max-w-5xl">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-orbitron font-black text-2xl text-white uppercase tracking-wider flex items-center gap-2">
-            <Settings className="w-7 h-7 text-[#39FF14]" /> System Configuration
-          </h1>
-          <p className="text-gray-500 text-xs mt-1.5">Manage operating parameters, brand identity assets, mail servers, and security rules</p>
+          <h1 className="font-orbitron font-bold text-2xl text-white">System Settings</h1>
+          <p className="text-gray-500 text-sm mt-1">Configure global variables, SMTP servers, brand logos, and security parameters.</p>
         </div>
         <button
-          onClick={fetchSettings}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white text-xs font-semibold transition-all font-orbitron uppercase tracking-wider"
+          onClick={loadSettings}
+          className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all"
         >
-          <RefreshCw className="w-3.5 h-3.5" /> Reload
+          <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </button>
       </div>
 
-      {/* Tabs Menu */}
-      <div className="flex flex-wrap gap-2 p-1.5 rounded-2xl bg-white/2 border border-white/5">
-        {[
-          { id: "features", label: "Feature Gates", icon: Settings },
-          { id: "general", label: "General Settings", icon: Globe },
-          { id: "appearance", label: "Brand Assets", icon: FileImage },
-          { id: "smtp", label: "SMTP (E-Mail)", icon: Server },
-          { id: "security", label: "Security & MFA", icon: ShieldAlert }
-        ].map(tab => (
+      {/* Tabs */}
+      <div className="flex border-b border-white/5 gap-2 overflow-x-auto">
+        {(["features", "general", "appearance", "smtp", "security"] as TabType[]).map((tab) => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              activeTab === tab.id
-                ? "bg-[#39FF14]/15 border border-[#39FF14]/25 text-[#39FF14]"
-                : "text-gray-400 border border-transparent hover:text-white hover:bg-white/5"
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-5 py-3 border-b-2 text-xs font-bold font-orbitron uppercase tracking-wider transition-all whitespace-nowrap ${
+              activeTab === tab
+                ? "border-[#39FF14] text-[#39FF14]"
+                : "border-transparent text-gray-500 hover:text-white"
             }`}
           >
-            <tab.icon className="w-4 h-4 shrink-0" />
-            {tab.label}
+            {tab}
           </button>
         ))}
       </div>
 
-      {/* ── TAB 1: FEATURE GATES ── */}
+      {/* ── FEATURES TAB ── */}
       {activeTab === "features" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {settings
-            .filter(s => Object.keys(FEATURE_ICONS).includes(s.key))
-            .map(setting => {
-              const IconComp = FEATURE_ICONS[setting.key] || Settings;
-              const isEnabled = setting.value === true || setting.value === "true";
-              return (
-                <div 
-                  key={setting.key} 
-                  className={`rounded-2xl border p-6 transition-all ${
-                    isEnabled 
-                      ? "border-[#39FF14]/20 bg-[#39FF14]/3" 
-                      : "border-white/5 bg-white/1 hover:bg-white/2"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 transition-all ${
-                        isEnabled ? "bg-[#39FF14]/10 border-[#39FF14]/20" : "bg-white/5 border-white/10"
-                      }`}>
-                        <IconComp className={`w-6 h-6 ${isEnabled ? "text-[#39FF14]" : "text-gray-500"}`} />
-                      </div>
-                      <div>
-                        <h3 className="font-orbitron font-bold text-white text-sm uppercase tracking-wide">{setting.label}</h3>
-                        <p className="text-[11px] text-gray-500 mt-1 leading-relaxed">{setting.description}</p>
-                      </div>
+          {features.map((setting) => {
+            const Icon = FEATURE_ICONS[setting.key] || Settings;
+            return (
+              <div
+                key={setting.key}
+                className={`glass rounded-2xl border p-6 transition-all ${
+                  setting.value ? "border-[#39FF14]/20 bg-[#39FF14]/3" : "border-white/5"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 transition-all ${setting.value ? "bg-[#39FF14]/15 border-[#39FF14]/30" : "bg-white/5 border-white/10"}`}>
+                      <Icon className={`w-6 h-6 ${setting.value ? "text-[#39FF14]" : "text-gray-500"}`} />
                     </div>
-                    <button
-                      onClick={() => toggleFeatureSetting(setting.key, isEnabled)}
-                      disabled={saving === setting.key}
-                      className="shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-                    >
-                      {saving === setting.key ? (
-                        <Loader2 className="w-9 h-9 text-[#39FF14] animate-spin" />
-                      ) : isEnabled ? (
-                        <ToggleRight className="w-10 h-10 text-[#39FF14]" />
-                      ) : (
-                        <ToggleLeft className="w-10 h-10 text-gray-500" />
-                      )}
-                    </button>
+                    <div>
+                      <h3 className="font-semibold text-white text-sm capitalize">{setting.label}</h3>
+                      <p className="text-xs text-gray-500 mt-1 leading-relaxed">{setting.description}</p>
+                    </div>
                   </div>
-                  <div className="mt-4 pt-4 border-t border-white/5">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                      isEnabled ? "bg-[#39FF14]/10 text-[#39FF14]" : "bg-gray-500/10 text-gray-500"
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${isEnabled ? "bg-[#39FF14]" : "bg-gray-500"}`} />
-                      {isEnabled ? "ACTIVE" : "DISABLED"}
-                    </span>
-                  </div>
+                  <button
+                    onClick={() => toggleFeature(setting.key, setting.value)}
+                    disabled={featureSaving === setting.key}
+                    className="shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                  >
+                    {featureSaving === setting.key ? (
+                      <Loader2 className="w-9 h-9 text-[#39FF14] animate-spin" />
+                    ) : setting.value ? (
+                      <ToggleRight className="w-10 h-10 text-[#39FF14]" />
+                    ) : (
+                      <ToggleLeft className="w-10 h-10 text-gray-500" />
+                    )}
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* ── TAB 2: GENERAL SETTINGS ── */}
+      {/* ── GENERAL TAB ── */}
       {activeTab === "general" && (
-        <div className="rounded-2xl border border-white/5 bg-white/1 p-8 space-y-6">
-          <h2 className="font-orbitron font-bold text-base text-white tracking-wide uppercase flex items-center gap-2">
-            <Globe className="w-5 h-5 text-[#39FF14]" /> General Information
-          </h2>
-          <p className="text-[11px] text-gray-500 -mt-2">Customize public site title, currency structures, and operation settings.</p>
-
+        <div className="glass rounded-2xl border border-white/5 p-6 space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+            <Globe className="w-5 h-5 text-[#39FF14]" />
+            <h2 className="font-orbitron font-bold text-sm text-white uppercase tracking-wider">General Configurations</h2>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Public Site Title</label>
-              <input
-                type="text"
-                value={generalForm.site_title}
-                onChange={e => setGeneralForm(prev => ({ ...prev, site_title: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              />
+              <label className="text-xs text-gray-400 font-semibold">Site / Application Title</label>
+              <input type="text" value={siteTitle} onChange={(e) => setSiteTitle(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Support Email Address</label>
-              <input
-                type="email"
-                value={generalForm.support_email}
-                onChange={e => setGeneralForm(prev => ({ ...prev, support_email: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              />
+              <label className="text-xs text-gray-400 font-semibold">Default System Currency</label>
+              <input type="text" value={currency} onChange={(e) => setCurrency(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-gray-400 font-semibold">Support Helpdesk Email</label>
+              <input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30" />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-gray-400 font-semibold">Support Contact Phone</label>
-              <input
-                type="text"
-                value={generalForm.support_phone}
-                onChange={e => setGeneralForm(prev => ({ ...prev, support_phone: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Default Currency Code</label>
-              <select
-                value={generalForm.default_currency}
-                onChange={e => setGeneralForm(prev => ({ ...prev, default_currency: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              >
-                <option value="PHP">PHP (₱) - Philippine Peso</option>
-                <option value="USD">USD ($) - US Dollar</option>
-                <option value="EUR">EUR (€) - Euro</option>
-              </select>
+              <input type="text" value={supportPhone} onChange={(e) => setSupportPhone(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30" />
             </div>
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-xs text-gray-400 font-semibold">Platform Operation Mode</label>
-              <select
-                value={generalForm.operating_status}
-                onChange={e => setGeneralForm(prev => ({ ...prev, operating_status: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              >
-                <option value="active">Active (Full operations / Quote builders live)</option>
-                <option value="maintenance">Maintenance Mode (Public pages locked)</option>
-                <option value="read_only">Read-Only Mode (Inquiries only, no new bookings)</option>
+              <label className="text-xs text-gray-400 font-semibold">Operational System Status</label>
+              <select value={systemStatus} onChange={(e) => setSystemStatus(e.target.value)} className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30">
+                <option value="Operational">Operational (Online)</option>
+                <option value="Maintenance Mode">Maintenance Mode</option>
+                <option value="Limited Access">Limited Fleet Access</option>
               </select>
             </div>
           </div>
-
-          <button
-            onClick={() => handleSaveForm("general", generalForm)}
-            disabled={saving === "general"}
-            className="btn-primary w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5"
-          >
-            {saving === "general" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save General Changes
-          </button>
+          <div className="flex justify-end pt-4">
+            <button onClick={saveSection} disabled={saving} className="px-6 py-3 rounded-xl bg-[#39FF14] text-[#0A0A0A] hover:bg-[#4FFF2A] text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 disabled:opacity-50">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save General Configurations
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ── TAB 3: BRAND ASSETS ── */}
+      {/* ── APPEARANCE TAB ── */}
       {activeTab === "appearance" && (
-        <div className="rounded-2xl border border-white/5 bg-white/1 p-8 space-y-6">
-          <h2 className="font-orbitron font-bold text-base text-white tracking-wide uppercase flex items-center gap-2">
-            <FileImage className="w-5 h-5 text-[#39FF14]" /> Appearance & Logos
-          </h2>
-          <p className="text-[11px] text-gray-500 -mt-2">Upload and manage visual assets. Direct syncs save paths directly into Firebase Storage.</p>
-
+        <div className="glass rounded-2xl border border-white/5 p-6 space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+            <Image className="w-5 h-5 text-[#39FF14]" />
+            <h2 className="font-orbitron font-bold text-sm text-white uppercase tracking-wider">Appearance & Brand Assets</h2>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
-              { id: "brand_logo_main", label: "Main Logo (Light Mode)", desc: "Main brand logo shown in headers and emails" },
-              { id: "brand_logo_dark", label: "Dark Theme Logo", desc: "Logo version with neon green accents on dark layout" },
-              { id: "brand_favicon", label: "Favicon Asset", desc: "Small logo displayed in browser tab (recommended .ico/.png)" }
-            ].map(asset => {
-              const url = (appearanceForm as any)[asset.id];
-              const isUploading = uploading[asset.id];
-              return (
-                <div key={asset.id} className="p-5 border border-white/5 rounded-2xl bg-white/2 space-y-4 flex flex-col justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-white uppercase tracking-wide">{asset.label}</p>
-                    <p className="text-[10px] text-gray-500 leading-relaxed">{asset.desc}</p>
-                  </div>
-
-                  <div className="w-full h-32 rounded-xl border border-white/10 bg-black/40 flex items-center justify-center p-3 relative overflow-hidden group">
-                    {isUploading ? (
-                      <Loader2 className="w-6 h-6 text-[#39FF14] animate-spin" />
-                    ) : url ? (
-                      <img src={url} alt={asset.label} className="max-w-full max-h-full object-contain" />
-                    ) : (
-                      <span className="text-[10px] text-gray-600 font-semibold uppercase">No Asset Uploaded</span>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2 w-full pt-2">
-                    <label className="flex-1 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-center text-xs font-bold text-gray-300 hover:text-white cursor-pointer transition-all flex items-center justify-center gap-1.5">
-                      <Upload className="w-3.5 h-3.5" />
-                      Upload File
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleFileUpload(asset.id, e)}
-                        disabled={isUploading}
-                        className="hidden"
-                      />
-                    </label>
-                    {url && (
-                      <button
-                        onClick={() => handleDeleteAsset(asset.id)}
-                        disabled={isUploading}
-                        className="px-3 py-2 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 hover:text-red-300 transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+              { key: "logo_main", label: "Main Logo", value: logoMain, bg: "bg-black" },
+              { key: "logo_dark", label: "Dark Mode Logo", value: logoDark, bg: "bg-white" },
+              { key: "logo_favicon", label: "Favicon Shortcut", value: logoFavicon, bg: "bg-black" },
+            ].map(({ key, label, value, bg }) => (
+              <div key={key} className="p-4 rounded-xl border border-white/5 bg-white/2 flex flex-col items-center justify-between text-center space-y-4">
+                <span className="text-[11px] font-bold text-gray-400 font-orbitron uppercase tracking-wide">{label}</span>
+                <div className={`w-32 h-20 border border-white/10 rounded-lg flex items-center justify-center ${bg} overflow-hidden relative`}>
+                  {value ? (
+                    <img src={value} alt={label} className="max-h-full max-w-full object-contain" />
+                  ) : (
+                    <span className={`text-[10px] ${bg === "bg-black" ? "text-gray-600" : "text-gray-400"}`}>No {label.toLowerCase()}</span>
+                  )}
+                  {uploadingLogo === key && (
+                    <div className="absolute inset-0 bg-black/80 flex items-center justify-center">
+                      <Loader2 className="w-5 h-5 text-[#39FF14] animate-spin" />
+                    </div>
+                  )}
                 </div>
-              );
-            })}
+                <div className="flex gap-2">
+                  <label className="px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-[10px] font-semibold text-gray-300 hover:text-white cursor-pointer transition-all flex items-center gap-1">
+                    <Upload className="w-3.5 h-3.5" /> Upload
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleAssetUpload(key, e)} />
+                  </label>
+                  {value && (
+                    <button onClick={() => handleAssetDelete(key)} className="p-1.5 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* ── TAB 4: SMTP CONFIGURATION ── */}
+      {/* ── SMTP TAB ── */}
       {activeTab === "smtp" && (
-        <div className="rounded-2xl border border-white/5 bg-white/1 p-8 space-y-6">
-          <h2 className="font-orbitron font-bold text-base text-white tracking-wide uppercase flex items-center gap-2">
-            <Server className="w-5 h-5 text-[#39FF14]" /> E-Mail Server (SMTP)
-          </h2>
-          <p className="text-[11px] text-gray-500 -mt-2">Provide host configuration variables to handle system alerts, quotation proposals, and auto-replies.</p>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass rounded-2xl border border-white/5 p-6 space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+            <Mail className="w-5 h-5 text-[#39FF14]" />
+            <h2 className="font-orbitron font-bold text-sm text-white uppercase tracking-wider">SMTP Server Configurations</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              { label: "SMTP Host Address", value: smtpHost, onChange: setSmtpHost, type: "text" },
+              { label: "SMTP Port Number", value: smtpPort, onChange: setSmtpPort, type: "text" },
+              { label: "SMTP Login Username", value: smtpUser, onChange: setSmtpUser, type: "text" },
+              { label: "SMTP Login Password", value: smtpPass, onChange: setSmtpPass, type: "password" },
+              { label: "Sender Name (From Name)", value: smtpFromName, onChange: setSmtpFromName, type: "text" },
+              { label: "Sender Email (From Address)", value: smtpFromEmail, onChange: setSmtpFromEmail, type: "email" },
+            ].map(({ label, value, onChange, type }) => (
+              <div key={label} className="space-y-1.5">
+                <label className="text-xs text-gray-400 font-semibold">{label}</label>
+                <input type={type} value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30" />
+              </div>
+            ))}
             <div className="space-y-1.5 md:col-span-2">
-              <label className="text-xs text-gray-400 font-semibold">SMTP Server Hostname</label>
-              <input
-                type="text"
-                value={smtpForm.smtp_host}
-                onChange={e => setSmtpForm(prev => ({ ...prev, smtp_host: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-                placeholder="smtp.mailgun.org"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Server Port</label>
-              <input
-                type="text"
-                value={smtpForm.smtp_port}
-                onChange={e => setSmtpForm(prev => ({ ...prev, smtp_port: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-                placeholder="587"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Encryption Type</label>
-              <select
-                value={smtpForm.smtp_encryption}
-                onChange={e => setSmtpForm(prev => ({ ...prev, smtp_encryption: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              >
-                <option value="TLS">STARTTLS (TLS)</option>
-                <option value="SSL">SSL</option>
+              <label className="text-xs text-gray-400 font-semibold">SMTP Security Encryption</label>
+              <select value={smtpEncrypt} onChange={(e) => setSmtpEncrypt(e.target.value)} className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30">
+                <option value="TLS">SSL / TLS (Secure Connection)</option>
+                <option value="STARTTLS">STARTTLS (Standard Ports)</option>
                 <option value="None">None (Unencrypted)</option>
               </select>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">SMTP Username</label>
-              <input
-                type="text"
-                value={smtpForm.smtp_user}
-                onChange={e => setSmtpForm(prev => ({ ...prev, smtp_user: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">SMTP Access Password</label>
-              <input
-                type="password"
-                value={smtpForm.smtp_pass}
-                onChange={e => setSmtpForm(prev => ({ ...prev, smtp_pass: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-                placeholder="••••••••"
-              />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-xs text-gray-400 font-semibold">Sender Email Address (From)</label>
-              <input
-                type="email"
-                value={smtpForm.smtp_from_email}
-                onChange={e => setSmtpForm(prev => ({ ...prev, smtp_from_email: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Sender Display Name</label>
-              <input
-                type="text"
-                value={smtpForm.smtp_from_name}
-                onChange={e => setSmtpForm(prev => ({ ...prev, smtp_from_name: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              />
-            </div>
           </div>
-
-          <button
-            onClick={() => handleSaveForm("smtp", smtpForm)}
-            disabled={saving === "smtp"}
-            className="btn-primary w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5"
-          >
-            {saving === "smtp" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Mail Settings
-          </button>
+          <div className="flex justify-end pt-4">
+            <button onClick={saveSection} disabled={saving} className="px-6 py-3 rounded-xl bg-[#39FF14] text-[#0A0A0A] hover:bg-[#4FFF2A] text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 disabled:opacity-50">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save SMTP Configurations
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ── TAB 5: SECURITY CONTROLS ── */}
+      {/* ── SECURITY TAB ── */}
       {activeTab === "security" && (
-        <div className="rounded-2xl border border-white/5 bg-white/1 p-8 space-y-6">
-          <h2 className="font-orbitron font-bold text-base text-white tracking-wide uppercase flex items-center gap-2">
-            <Key className="w-5 h-5 text-[#39FF14]" /> Security Access Policies
-          </h2>
-          <p className="text-[11px] text-gray-500 -mt-2">Maintain credential policy thresholds, active sessions timeout limitations, and protection gates.</p>
-
+        <div className="glass rounded-2xl border border-white/5 p-6 space-y-6">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-3">
+            <Key className="w-5 h-5 text-[#39FF14]" />
+            <h2 className="font-orbitron font-bold text-sm text-white uppercase tracking-wider">Security Access Controls</h2>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Password Strength Policy</label>
-              <select
-                value={securityForm.security_pw_policy}
-                onChange={e => setSecurityForm(prev => ({ ...prev, security_pw_policy: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              >
-                <option value="low">Basic (Min. 6 characters, no complexity constraints)</option>
-                <option value="medium">Medium (Min. 8 characters, letters & numbers)</option>
-                <option value="high">Strict (Min. 10 characters, upper/lower/numbers/symbols)</option>
-              </select>
+              <label className="text-xs text-gray-400 font-semibold">Minimum Password Length</label>
+              <input type="number" value={minPasswordLength} onChange={(e) => setMinPasswordLength(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Active Session Expiry (Minutes)</label>
-              <input
-                type="number"
-                value={securityForm.security_session_timeout}
-                onChange={e => setSecurityForm(prev => ({ ...prev, security_session_timeout: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              />
+              <label className="text-xs text-gray-400 font-semibold">User Session Timeout (minutes)</label>
+              <input type="number" value={sessionTimeout} onChange={(e) => setSessionTimeout(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30" />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">Two-Factor Authentication (2FA)</label>
-              <select
-                value={securityForm.security_mfa_enabled}
-                onChange={e => setSecurityForm(prev => ({ ...prev, security_mfa_enabled: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              >
-                <option value="false">Disabled (Credential-only login verification)</option>
-                <option value="true">Enabled (Enforces MFA auth verification codes)</option>
-              </select>
+            <div className="p-4 rounded-xl border border-white/5 bg-white/1 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-white">Require Complexity Symbols</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Enforce uppercase, numbers, and symbols</p>
+              </div>
+              <button onClick={() => setRequireSpecialChar(!requireSpecialChar)} className="shrink-0">
+                {requireSpecialChar ? <ToggleRight className="w-10 h-10 text-[#39FF14]" /> : <ToggleLeft className="w-10 h-10 text-gray-500" />}
+              </button>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-gray-400 font-semibold">API Rate Limiting</label>
-              <select
-                value={securityForm.security_rate_limit}
-                onChange={e => setSecurityForm(prev => ({ ...prev, security_rate_limit: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30"
-              >
-                <option value="true">Enabled (Bans rapid concurrent api connection requests)</option>
-                <option value="false">Disabled (Unlimited connection calls)</option>
-              </select>
+            <div className="p-4 rounded-xl border border-white/5 bg-white/1 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold text-white">Two-Factor Authentication (2FA)</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">Enforce OTP codes on user login actions</p>
+              </div>
+              <button onClick={() => setTwoFactorRequired(!twoFactorRequired)} className="shrink-0">
+                {twoFactorRequired ? <ToggleRight className="w-10 h-10 text-[#39FF14]" /> : <ToggleLeft className="w-10 h-10 text-gray-500" />}
+              </button>
+            </div>
+            <div className="space-y-1.5 md:col-span-2">
+              <label className="text-xs text-gray-400 font-semibold flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+                Allowed IP Range Restrictions (CSV)
+              </label>
+              <input type="text" value={ipLockout} onChange={(e) => setIpLockout(e.target.value)} placeholder="e.g. 192.168.1.1, 10.0.0.1/24 (Leave empty to allow all IP addresses)" className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#39FF14]/30" />
             </div>
           </div>
-
-          <button
-            onClick={() => handleSaveForm("security", securityForm)}
-            disabled={saving === "security"}
-            className="btn-primary w-full py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5"
-          >
-            {saving === "security" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save Policy Settings
-          </button>
+          <div className="flex justify-end pt-4">
+            <button onClick={saveSection} disabled={saving} className="px-6 py-3 rounded-xl bg-[#39FF14] text-[#0A0A0A] hover:bg-[#4FFF2A] text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 disabled:opacity-50">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save Security Policies
+            </button>
+          </div>
         </div>
       )}
     </div>

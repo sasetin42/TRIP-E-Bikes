@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Zap, Mail, Lock, ArrowLeft, Eye, EyeOff, User, CheckCircle, FileText, Clock, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { apiClient } from "@/lib/api-client";
+import { supabase } from "@/lib/supabase";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 function mapCustomer(user: any) {
@@ -90,8 +90,9 @@ export default function CustomerAuthModal({
   const handleSendOtp = async () => {
     if (!email.trim()) return;
     setLoading(true);
-    const { data, error } = await apiClient.post("/auth.php?action=send_otp", {
+    const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
+      options: { shouldCreateUser: true },
     });
     if (error) {
       toast.error(error.message);
@@ -107,8 +108,9 @@ export default function CustomerAuthModal({
   const handleResendOtp = async () => {
     if (resendCooldown > 0 || loading) return;
     setLoading(true);
-    const { data, error } = await apiClient.post("/auth.php?action=send_otp", {
+    const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
+      options: { shouldCreateUser: true },
     });
     if (error) {
       toast.error(error.message);
@@ -121,44 +123,49 @@ export default function CustomerAuthModal({
 
   const handleVerifyAndRegister = async () => {
     setLoading(true);
-    const { data, error } = await apiClient.post("/auth.php?action=verify_otp", {
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
       email: email.trim(),
-      otp: otp.trim(),
-      password: password.trim(),
-      username: username || email.split("@")[0],
-      role: "customer",
+      token: otp.trim(),
+      type: "email",
     });
-    if (error) {
+    if (verifyError || !verifyData.user) {
       toast.error("Invalid or expired code. Please try again.");
       setLoading(false);
       return;
     }
-    if (data && data.user && data.token) {
-      localStorage.setItem("token", data.token);
-      login(mapCustomer(data.user));
-      toast.success("Account created! Welcome to TRIP Mobility.");
-      onSuccess();
+    // Set password + username metadata
+    const uname = username || email.split("@")[0];
+    const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+      password,
+      data: { username: uname },
+    });
+    if (updateError) {
+      toast.error(updateError.message);
+      setLoading(false);
+      return;
     }
+    const u = updateData.user;
+    login(mapCustomer({ id: u.id, email: u.email || "", username: u.user_metadata?.username }));
+    toast.success("Account created! Welcome to TRIP Mobility.");
+    onSuccess();
     setLoading(false);
   };
 
   const handleLogin = async () => {
     setLoading(true);
-    const { data, error } = await apiClient.post("/auth.php?action=login", {
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password: password.trim(),
     });
-    if (error) {
-      toast.error(error.message);
+    if (error || !data.user) {
+      toast.error(error?.message || "Invalid credentials");
       setLoading(false);
       return;
     }
-    if (data && data.user && data.token) {
-      localStorage.setItem("token", data.token);
-      login(mapCustomer(data.user));
-      toast.success("Welcome back!");
-      onSuccess();
-    }
+    const u = data.user;
+    login(mapCustomer({ id: u.id, email: u.email || "", username: u.user_metadata?.username }));
+    toast.success("Welcome back!");
+    onSuccess();
     setLoading(false);
   };
 
@@ -221,25 +228,20 @@ export default function CustomerAuthModal({
                 <p className="text-[11px] text-gray-400 mb-2.5">Explore the customer portal instantly — no personal email needed.</p>
                 <button
                   onClick={async () => {
-                    try {
-                      const userCredential = await signInWithEmailAndPassword(
-                        auth,
-                        "demo.customer@tripmobility.ph",
-                        "DemoTrip2026!"
-                      );
-                      const firebaseUser = userCredential.user;
-                      login(mapCustomer({
-                        id: firebaseUser.uid,
-                        email: firebaseUser.email || "",
-                        username: firebaseUser.email?.split("@")[0] || "Demo Customer"
-                      }));
-                      toast.success("Demo account loaded! Welcome.");
-                      onSuccess();
-                    } catch (e) {
+                    setLoading(true);
+                    const { data, error } = await supabase.auth.signInWithPassword({
+                      email: "demo.customer@tripmobility.ph",
+                      password: "DemoTrip2026!",
+                    });
+                    if (error || !data.user) {
                       toast.error("Demo login failed. Please use the sign-in form.");
                       setMode("login");
                       setEmail("demo.customer@tripmobility.ph");
                       setPassword("DemoTrip2026!");
+                    } else {
+                      login(mapCustomer({ id: data.user.id, email: data.user.email || "", username: data.user.user_metadata?.username }));
+                      toast.success("Demo account loaded! Welcome.");
+                      onSuccess();
                     }
                     setLoading(false);
                   }}
