@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface DbLead {
   id: string;
@@ -144,7 +145,7 @@ export default function AdminLeads() {
           { label: "Closed Won", value: stats.won, icon: CheckCircle, color: "text-emerald-400" },
           { label: "High Priority", value: stats.highPriority, icon: TrendingUp, color: "text-yellow-400" },
         ].map((stat) => (
-          <div key={stat.label} className="glass rounded-xl p-4 border border-white/5">
+          <div key={stat.label} className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/5">
             <div className="flex items-center gap-2 mb-2">
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
               <p className="text-xs text-gray-500">{stat.label}</p>
@@ -160,22 +161,24 @@ export default function AdminLeads() {
           <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            id="admin-leads-search"
+            name="search"
             placeholder="Search leads by name, email, company..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#39FF14]/30"
           />
         </div>
-        <select
+        <CustomSelect
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as LeadStatus | "all")}
-          className="bg-[#111] border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-[#39FF14]/30 min-w-[140px]"
-        >
-          <option value="all">All Status</option>
-          {PIPELINE_STAGES.map((s) => (
-            <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
-          ))}
-        </select>
+          onChange={(v) => setStatusFilter(v as LeadStatus | "all")}
+          options={[
+            { value: "all", label: "All Status" },
+            ...PIPELINE_STAGES.map((s) => ({ value: s, label: STATUS_CONFIG[s].label }))
+          ]}
+          size="sm"
+          className="min-w-[140px]"
+        />
         <div className="flex gap-1 border border-white/10 rounded-lg p-1">
           {(["table", "kanban"] as const).map((v) => (
             <button
@@ -190,7 +193,7 @@ export default function AdminLeads() {
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <div className="flex flex-col items-center justify-center py-[50px] gap-4">
           <Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" />
           <p className="text-gray-500 text-sm">Loading leads from database...</p>
         </div>
@@ -198,7 +201,7 @@ export default function AdminLeads() {
         <div className={`${selectedLead ? "grid grid-cols-1 lg:grid-cols-3 gap-6" : "block"}`}>
           {/* TABLE VIEW */}
           {view === "table" && (
-            <div className={`${selectedLead ? "lg:col-span-2" : ""} glass rounded-xl border border-white/5 overflow-hidden`}>
+            <div className={`${selectedLead ? "lg:col-span-2" : ""} bg-white/5 backdrop-blur-md rounded-xl border border-white/5 overflow-hidden`}>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -296,7 +299,7 @@ export default function AdminLeads() {
                           <div
                             key={lead.id}
                             onClick={() => setSelectedLead(selectedLead?.id === lead.id ? null : lead)}
-                            className="glass rounded-xl p-4 border border-white/5 hover:border-white/15 cursor-pointer transition-all"
+                            className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/5 hover:border-white/15 cursor-pointer transition-all"
                           >
                             <div className="flex items-center gap-2 mb-2">
                               <div className="w-6 h-6 rounded-full bg-[#39FF14]/10 flex items-center justify-center text-[#39FF14] text-xs font-bold">
@@ -328,7 +331,7 @@ export default function AdminLeads() {
 
           {/* LEAD DETAIL PANEL */}
           {selectedLead && (
-            <div className="glass rounded-xl border border-white/5 overflow-auto">
+            <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/5 overflow-auto">
               <div className="sticky top-0 bg-[#111]/90 backdrop-blur-sm px-5 py-4 border-b border-white/5 flex items-center justify-between">
                 <div>
                   <p className="font-semibold text-white text-sm">{selectedLead.name}</p>
@@ -463,3 +466,4 @@ export default function AdminLeads() {
     </div>
   );
 }
+

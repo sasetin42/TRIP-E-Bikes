@@ -351,7 +351,7 @@ export const FINANCING_OPTIONS = [
       "Custom pricing negotiation",
       "Leasing options available",
       "On-site service team",
-      "Extended 3-year warranty",
+      "Extended 1-year warranty",
       "Priority spare parts access",
     ],
   },

@@ -16,15 +16,15 @@ export default function SectionObserver({ children, delay = 0, className = "" }:
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setTimeout(() => setVisible(true), delay);
+          requestAnimationFrame(() => setVisible(true));
           observer.disconnect();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.05 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [delay]);
+  }, []);
 
   return (
     <div

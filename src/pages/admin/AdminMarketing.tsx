@@ -30,21 +30,21 @@ export default function AdminMarketing() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass rounded-2xl border border-white/5 p-6 flex items-center justify-between">
+        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 p-6 flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500 font-semibold uppercase">Total Campaigns</p>
             <p className="font-orbitron font-bold text-3xl text-white mt-1">12 Active</p>
           </div>
           <Megaphone className="w-10 h-10 text-[#39FF14]/40" />
         </div>
-        <div className="glass rounded-2xl border border-white/5 p-6 flex items-center justify-between">
+        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 p-6 flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500 font-semibold uppercase">Promo Redemptions</p>
             <p className="font-orbitron font-bold text-3xl text-white mt-1">556 times</p>
           </div>
           <Percent className="w-10 h-10 text-cyan-400/40" />
         </div>
-        <div className="glass rounded-2xl border border-white/5 p-6 flex items-center justify-between">
+        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 p-6 flex items-center justify-between">
           <div>
             <p className="text-xs text-gray-500 font-semibold uppercase">Campaign Sales ROI</p>
             <p className="font-orbitron font-bold text-3xl text-white mt-1">3.4x</p>
@@ -53,7 +53,7 @@ export default function AdminMarketing() {
         </div>
       </div>
 
-      <div className="glass rounded-2xl border border-white/5 overflow-hidden">
+      <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden">
         <div className="p-6 border-b border-white/5 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">Active Promo Codes</h2>
         </div>
@@ -87,3 +87,4 @@ export default function AdminMarketing() {
     </div>
   );
 }
+

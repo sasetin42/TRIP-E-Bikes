@@ -7,6 +7,8 @@ export interface Product {
   category: "delivery" | "folding" | "mountain";
   image: string;
   badge?: string;
+  brochureUrl?: string | null;
+  videoUrl?: string | null;
   specs: {
     motor: string;
     battery: string;
@@ -23,6 +25,7 @@ export interface Product {
   useCases: string[];
   colors: string[];
   inStock: boolean;
+  galleryImages?: string[];
 }
 
 export interface Lead {

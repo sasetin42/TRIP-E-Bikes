@@ -79,7 +79,7 @@ export function CustomSelect({
         onClick={open ? closeDropdown : openDropdown}
         disabled={disabled}
         className={cn(
-          "w-full flex items-center justify-between gap-2 rounded-xl border transition-all duration-200 text-left",
+          "custom-select-trigger w-full flex items-center justify-between gap-2 rounded-xl border transition-all duration-200 text-left",
           "border-white/10 text-white placeholder-gray-600",
           "focus:outline-none focus:border-[#39FF14]/50",
           "hover:border-white/20 active:scale-[0.99]",

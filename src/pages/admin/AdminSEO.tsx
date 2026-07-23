@@ -31,7 +31,7 @@ export default function AdminSEO() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 glass rounded-2xl border border-white/5 overflow-hidden">
+        <div className="lg:col-span-2 bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden">
           <div className="p-6 border-b border-white/5 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">Metadata Index</h2>
           </div>
@@ -62,7 +62,7 @@ export default function AdminSEO() {
         </div>
 
         <div className="space-y-4">
-          <div className="glass rounded-2xl border border-white/5 p-6 space-y-4">
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 p-6 space-y-4">
             <h3 className="text-base font-semibold text-white">Sitemap Options</h3>
             <p className="text-xs text-gray-400 leading-relaxed">
               Auto-generate sitemaps and manifest headers for indexing engines.
@@ -77,3 +77,4 @@ export default function AdminSEO() {
     </div>
   );
 }
+

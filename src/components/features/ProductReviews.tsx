@@ -231,8 +231,10 @@ export default function ProductReviews({ productId, productName, onRequestAuth }
 
           {/* Review Text */}
           <div className="mb-5">
-            <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Your Review <span className="text-[#39FF14]">*</span></label>
+            <label htmlFor="review-text" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Your Review <span className="text-[#39FF14]">*</span></label>
             <textarea
+              id="review-text"
+              name="review"
               value={reviewText}
               onChange={e => setReviewText(e.target.value)}
               placeholder={`Share your experience with the ${productName}...`}

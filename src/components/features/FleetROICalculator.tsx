@@ -86,12 +86,13 @@ export default function FleetROICalculator() {
         {/* Inputs */}
         <div className="p-8 space-y-7">
           <div>
-            <label className="flex items-center gap-2 text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">
+            <label htmlFor="roi-riders" className="flex items-center gap-2 text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">
               <Users className="w-3.5 h-3.5 text-[#39FF14]" />
               Number of Riders / Bikes
               <span className="ml-auto font-orbitron font-bold text-white text-base">{riders}</span>
             </label>
             <input
+              id="roi-riders" name="riders"
               type="range" min={1} max={100} step={1} value={riders}
               onChange={(e) => setRiders(Number(e.target.value))}
               className="w-full accent-[#39FF14] h-1.5 rounded-full"
@@ -102,12 +103,13 @@ export default function FleetROICalculator() {
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">
+            <label htmlFor="roi-fuel" className="flex items-center gap-2 text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">
               <Fuel className="w-3.5 h-3.5 text-[#39FF14]" />
               Current Fuel Cost / Rider / Day (PHP)
               <span className="ml-auto font-orbitron font-bold text-white text-base">₱{fuelPerDay}</span>
             </label>
             <input
+              id="roi-fuel" name="fuel_cost"
               type="range" min={100} max={800} step={25} value={fuelPerDay}
               onChange={(e) => setFuelPerDay(Number(e.target.value))}
               className="w-full accent-[#39FF14] h-1.5 rounded-full"
@@ -118,12 +120,13 @@ export default function FleetROICalculator() {
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">
+            <label htmlFor="roi-distance" className="flex items-center gap-2 text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">
               <MapPin className="w-3.5 h-3.5 text-[#39FF14]" />
               Daily Distance per Rider (km)
               <span className="ml-auto font-orbitron font-bold text-white text-base">{kmPerDay} km</span>
             </label>
             <input
+              id="roi-distance" name="distance"
               type="range" min={20} max={150} step={5} value={kmPerDay}
               onChange={(e) => setKmPerDay(Number(e.target.value))}
               className="w-full accent-[#39FF14] h-1.5 rounded-full"

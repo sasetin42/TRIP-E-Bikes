@@ -45,7 +45,7 @@ export default function AdminCMS() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <div className="glass rounded-2xl border border-white/5 p-6">
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 p-6">
             <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <LayoutGrid className="w-5 h-5 text-[#39FF14]" />
               Homepage Layout Sections
@@ -78,7 +78,7 @@ export default function AdminCMS() {
         </div>
 
         <div className="space-y-4">
-          <div className="glass rounded-2xl border border-white/5 p-6 space-y-4">
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/5 p-6 space-y-4">
             <h2 className="text-base font-semibold text-white">Section Editor</h2>
             <p className="text-xs text-gray-400 leading-relaxed">
               Drag sections to reorder, add new sections or update visual margins.
@@ -93,3 +93,4 @@ export default function AdminCMS() {
     </div>
   );
 }
+

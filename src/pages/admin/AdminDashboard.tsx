@@ -99,7 +99,7 @@ export default function AdminDashboard() {
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {METRICS.map((metric, i) => (
-          <div key={i} className="glass rounded-xl p-5 border border-white/5 hover:border-white/10 transition-all">
+          <div key={i} className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/5 hover:border-white/10 transition-all">
             <div className="flex items-start justify-between mb-4">
               <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
                 <metric.icon className={`w-5 h-5 ${metric.color}`} />
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pipeline + Recent Leads */}
-        <div className="lg:col-span-2 glass rounded-xl p-6 border border-white/5">
+        <div className="lg:col-span-2 bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-orbitron font-bold text-lg text-white">Live Sales Pipeline</h2>
             <Link to="/admin/leads" className="text-xs text-[#39FF14] flex items-center gap-1 hover:gap-2 transition-all">
@@ -210,7 +210,7 @@ export default function AdminDashboard() {
         {/* Right Column */}
         <div className="space-y-6">
           {/* Product Performance */}
-          <div className="glass rounded-xl p-6 border border-white/5">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
             <h2 className="font-orbitron font-bold text-base text-white mb-4">Product Interest</h2>
             <div className="space-y-4">
               {PRODUCTS.map((p, i) => {
@@ -236,7 +236,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Conversion Stats */}
-          <div className="glass rounded-xl p-6 border border-white/5">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
             <h2 className="font-orbitron font-bold text-base text-white mb-4">Conversion Stats</h2>
             <div className="space-y-3">
               {[
@@ -257,7 +257,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="glass rounded-xl p-6 border border-white/5">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
             <h2 className="font-orbitron font-bold text-base text-white mb-4">Quick Actions</h2>
             <div className="space-y-2">
               {[
@@ -282,3 +282,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

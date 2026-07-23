@@ -2,39 +2,71 @@ import { useState, useEffect } from "react";
 import { trackPageView, trackCTAClick, trackQuoteModalOpen } from "@/hooks/useTracking";
 import { Link } from "react-router-dom";
 import {
-  Zap, ChevronDown, ArrowRight, Play, Star, Battery, Gauge, Award,
-  Leaf, Shield, Users, TrendingUp, CheckCircle, Quote, Landmark,
-  Compass, GraduationCap, Truck
+  Zap, ChevronDown, ArrowRight, Star, Battery, Gauge, Shield,
+  Users, CheckCircle, Quote, Compass, Target, Gem, Layers, HelpCircle, PhoneCall,
+  ThumbsUp, Dumbbell, Leaf, Coins, Bike, Smile, MapPin, Timer, Award
 } from "lucide-react";
 import heroBike from "@/assets/hero-bike.jpg";
-import particleBg from "@/assets/particle-bg.jpg";
-import sustainabilityBg from "@/assets/sustainability-bg.jpg";
-import useCaseDelivery from "@/assets/use-case-delivery.jpg";
-import useCaseCorporate from "@/assets/use-case-corporate.jpg";
-import { PRODUCTS } from "@/constants/products";
-import { MOCK_TESTIMONIALS, FINANCING_OPTIONS } from "@/constants/data";
+import heroSlide1 from "@/assets/hero-slide1.jpg";
+import heroSlide2 from "@/assets/hero-slide2.jpg";
+import urbanEbikeFleet from "@/assets/bike-delivery.jpg";
+
+const HERO_SLIDES = [heroSlide1, heroSlide2];
+import { PRODUCTS, syncLiveProducts } from "@/constants/products";
+import { MOCK_TESTIMONIALS } from "@/constants/data";
 import ProductCard from "@/components/features/ProductCard";
-import ParticleField from "@/components/features/ParticleField";
 import SectionObserver from "@/components/features/SectionObserver";
 import QuoteModal from "@/components/features/QuoteModal";
 import BikeAssemblyAnimation from "@/components/features/BikeAssemblyAnimation";
-import { CompareBar, CompareModal } from "@/components/features/ProductComparison";
+import { CompareBar } from "@/components/features/ProductComparison";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
-const STATS = [
-  { value: "3,000+", label: "Units Deployed", icon: Zap },
-  { value: "100+", label: "km Max Range", icon: Battery },
-  { value: "200+", label: "Business Clients", icon: Users },
-  { value: "3-Year", label: "Warranty", icon: Shield },
+
+
+const FAQS = [
+  {
+    q: "Do I need a driver's license to ride a TRIP E-Bike?",
+    a: "Under current LTO regulations in the Philippines, category L1a electric bicycles (max speed 25 km/h) do not require a driver's license or LTO registration. For faster categories, check our licensing guide or consult our sales specialists."
+  },
+  {
+    q: "How long does a full charge take and how much does it cost?",
+    a: "A full charge takes 4-6 hours for e-bikes and 5-6 hours for e-scooters. It costs up to ₱30 per full charge, saving you up to 90% compared to gasoline running costs."
+  },
+  {
+    q: "What is covered under the 1-Year Warranty?",
+    a: "Our comprehensive 1-year warranty covers structural frame integrity, motor components, and the lithium-ion battery management systems. We maintain complete spare parts inventories in Manila."
+  },
+  {
+    q: "Can I customize the specifications of my fleet order?",
+    a: "Yes. For corporate clients and delivery fleets, we offer custom battery capacities, heavy-duty cargo rack fittings, specialized branding layouts, and integrated GPS tracking platforms."
+  }
 ];
 
 export default function HomePage() {
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<string | undefined>();
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    trackPageView("/", "Home — TRIP Mobility | Premium Electric Bikes Philippines");
-    document.title = "TRIP Mobility | Premium Electric Bikes Philippines";
-    // Organization schema injection
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+  const [faqActive, setFaqActive] = useState<number | null>(null);
+  const { settings } = useSystemSettings();
+  const siteTitle = settings.site_title || "TRIP Mobility";
+
+  const [productsList, setProductsList] = useState(PRODUCTS);
+  useEffect(() => {
+    syncLiveProducts().then(list => setProductsList([...list]));
+  }, []);
+
+  useEffect(() => {
+    const fullTitle = `${siteTitle} | Premium Electric Bikes Philippines`;
+    trackPageView("/", `Home — ${fullTitle}`);
+    document.title = fullTitle;
+    
     const existing = document.getElementById("org-schema");
     if (!existing) {
       const script = document.createElement("script");
@@ -49,22 +81,12 @@ export default function HomePage() {
         "description": "Philippines' #1 premium electric bike brand. Purpose-built e-bikes for delivery, corporate fleets, and personal mobility.",
         "foundingDate": "2022",
         "areaServed": "PH",
-        "contactPoint": [
-          { "@type": "ContactPoint", "contactType": "Sales", "telephone": "+63-2-8888-8747", "email": "sales@tripmobility.ph", "availableLanguage": ["English", "Filipino"] },
-          { "@type": "ContactPoint", "contactType": "Customer Support", "telephone": "+63-917-888-8747", "email": "support@tripmobility.ph" }
-        ],
-        "address": { "@type": "PostalAddress", "streetAddress": "123 Electric Avenue, Barangay TRIP", "addressLocality": "Mandaluyong City", "addressRegion": "Metro Manila", "postalCode": "1550", "addressCountry": "PH" },
-        "sameAs": [
-          "https://facebook.com/tripmobility",
-          "https://instagram.com/tripmobility",
-          "https://tiktok.com/@tripmobility",
-          "https://linkedin.com/company/tripmobility"
-        ]
+        "address": { "@type": "PostalAddress", "streetAddress": "105 Maryland Street, Cubao", "addressLocality": "Quezon City", "addressRegion": "Metro Manila", "postalCode": "1111", "addressCountry": "PH" }
       });
       document.head.appendChild(script);
     }
     return () => { const s = document.getElementById("org-schema"); if (s) s.remove(); };
-  }, []);
+  }, [siteTitle]);
 
   const handleProductQuote = (productName: string) => {
     setSelectedProduct(productName);
@@ -73,133 +95,119 @@ export default function HomePage() {
   };
 
   return (
-    <div className="bg-[#0A0A0A]">
-      {/* ── HERO ── */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Particle layer */}
-        <ParticleField />
-
-        {/* Background image */}
-        <div className="absolute inset-0">
-          <img
-            src={heroBike}
-            alt="TRIP E-Bike"
-            className="w-full h-full object-cover opacity-30"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A]/60 via-transparent to-[#0A0A0A]" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A]/80 via-transparent to-[#0A0A0A]/60" />
+    <div className="bg-white text-black">
+      {/* 1. HERO */}
+      <section className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          {HERO_SLIDES.map((slide, index) => (
+            <img
+              key={index}
+              src={slide}
+              alt={`TRIP E-Bike Slide ${index + 1}`}
+              className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-1000 ease-in-out ${
+                index === currentSlide ? "opacity-80" : "opacity-0"
+              }`}
+            />
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-t from-white via-white/50 to-transparent" />
         </div>
 
-        {/* Radial glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#39FF14]/8 rounded-full blur-[120px] pointer-events-none" />
-
-        {/* Content */}
-        <div className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-24 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#39FF14]/30 bg-[#39FF14]/5 mb-8 animate-fade-up">
-            <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" />
-            <span className="text-xs text-[#39FF14] font-medium tracking-widest uppercase">Philippines' #1 Premium E-Bike Brand</span>
-          </div>
-
-          <h1 className="font-orbitron font-black text-5xl sm:text-6xl lg:text-8xl text-white mb-6 leading-tight animate-fade-up">
-            RIDE THE{" "}
-            <span className="gradient-text">FUTURE.</span>
+        <div className="relative z-10 max-w-5xl mx-auto px-6 pt-24 pb-12 text-center">
+          <h1 className="hero-title text-black mb-6 uppercase tracking-tight">
+            A new standard
             <br />
-            OWN THE ROAD.
+            of electric <span className="text-white">mobility</span>
           </h1>
 
-          <p className="text-gray-400 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-up">
-            Premium electric bikes engineered for Philippine roads. From last-mile delivery to mountain trails — TRIP Mobility powers every journey.
+          <p className="text-[#707070] text-lg max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
+            Premium electric bikes engineered for the demanding Philippine road environments. From high-capacity cargo networks to responsive mountain expeditions.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={() => { trackQuoteModalOpen("hero_cta"); trackCTAClick("Get a Free Quote", "hero"); setQuoteOpen(true); }}
-              className="btn-primary text-sm flex items-center justify-center gap-2"
+              className="btn-primary"
             >
-              <Zap className="w-4 h-4" />
               Get a Free Quote
             </button>
-            <Link to="/products" className="btn-outline text-sm flex items-center justify-center gap-2">
+            <Link to="/products" className="btn-outline">
               Explore Models
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 ml-2" />
             </Link>
           </div>
 
-          {/* Floating stats */}
-          <div className="mt-20 grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {STATS.map((stat, i) => (
-              <div key={i} className="glass rounded-xl p-4 border border-white/5">
-                <stat.icon className="w-5 h-5 text-[#39FF14] mb-2" />
-                <p className="font-orbitron font-bold text-2xl text-white">{stat.value}</p>
-                <p className="text-xs text-gray-500 mt-1">{stat.label}</p>
-              </div>
-            ))}
-          </div>
 
-          {/* Scroll indicator */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 animate-bounce">
-            <p className="text-xs text-gray-600 tracking-widest uppercase">Scroll</p>
-            <ChevronDown className="w-4 h-4 text-gray-600" />
-          </div>
         </div>
       </section>
 
-      {/* ── WHY TRIP ── */}
-      <section className="py-24 relative overflow-hidden">
-        <div className="absolute inset-0 bg-section-gradient" />
-        <div className="relative max-w-7xl mx-auto px-6">
+      {/* 1.5 DAILY UTILITY */}
+      <section className="py-[50px] border-t border-black/5 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
           <SectionObserver>
-            <div className="text-center mb-16">
-              <p className="section-label mb-3">Why Choose TRIP</p>
-              <h2 className="font-orbitron font-bold text-4xl sm:text-5xl text-white">
-                Built Different. Built{" "}
-                <span className="gradient-text">Better.</span>
+            <div className="text-center mb-20">
+              <h2 className="text-[36px] font-bold text-black uppercase tracking-tight mb-4 leading-tight">
+                E-Bikes Give You Everything You Need In Your Daily Lives
               </h2>
+              <p className="section-label">
+                Explore Possibilities Of E-Bikes
+              </p>
             </div>
           </SectionObserver>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
-                icon: Zap,
-                title: "Premium Performance",
-                desc: "500W–750W motors with enterprise-grade components. Every TRIP bike undergoes 72-point quality checks before delivery.",
+                title: "Convenience",
+                desc: "Effortlessly zip around the city with E-bikes.",
+                icon: ThumbsUp
               },
               {
-                icon: Battery,
-                title: "Longest Range",
-                desc: "Dual-battery systems deliver up to 120km per charge — the longest range in its class for Philippine conditions.",
+                title: "Health and Fitness",
+                desc: "Improve your health without breaking a sweat on E-bikes.",
+                icon: Dumbbell
               },
               {
-                icon: Shield,
-                title: "3-Year Warranty",
-                desc: "Industry-leading warranty coverage with nationwide service centers and genuine spare parts guaranteed.",
+                title: "Environmentally Friendly",
+                desc: "Go green with zero-emission E-bikes.",
+                icon: Leaf
               },
               {
-                icon: TrendingUp,
-                title: "Proven ROI",
-                desc: "Clients report 80% reduction in fuel costs. Average ROI achieved within 4–6 months of fleet deployment.",
+                title: "Cost-effective",
+                desc: "Cheaper on maintenance, gas, parking fees, and insurance costs with E-bikes.",
+                icon: Coins
               },
               {
-                icon: Leaf,
-                title: "Zero Emissions",
-                desc: "Each TRIP e-bike eliminates approximately 1.2 tons of CO₂ annually compared to petrol motorcycles.",
+                title: "Easy to Park",
+                desc: "Hassle-free parking with E-bikes. No need to find spots.",
+                icon: Bike
               },
               {
-                icon: Award,
-                title: "After-Sales Excellence",
-                desc: "Dedicated support team, same-day spare parts delivery, and nationwide service network across the Philippines.",
+                title: "Less Stressful",
+                desc: "Ease your stress away from traffic and enjoy your ride with E-bikes.",
+                icon: Smile
               },
-            ].map((feature, i) => (
-              <SectionObserver key={i} delay={i * 100}>
-                <div className="glass rounded-xl p-6 border border-white/5 hover:border-[#39FF14]/30 transition-all duration-500 group h-full">
-                  <div className="w-12 h-12 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center mb-4 group-hover:bg-[#39FF14]/20 transition-colors">
-                    <feature.icon className="w-6 h-6 text-[#39FF14]" />
+              {
+                title: "Improved Mobility",
+                desc: "Improve your mobility with E-bikes.",
+                icon: MapPin
+              },
+              {
+                title: "Faster Travel Times",
+                desc: "Zoom past traffic with E-bikes. Arrive at your destination with ease.",
+                icon: Timer
+              }
+            ].map((item, i) => (
+              <SectionObserver key={i} className="h-full">
+                <div className="h-full flex flex-col items-center text-center p-8 border border-black/5 bg-[#FAFAFA] hover:border-black hover:shadow-premium transition-all duration-500 rounded-[2px] group">
+                  <div className="w-16 h-16 rounded-full bg-black/5 flex items-center justify-center mb-6 group-hover:bg-black transition-colors duration-300">
+                    <item.icon className="w-7 h-7 text-black group-hover:text-white transition-colors duration-300" />
                   </div>
-                  <h3 className="font-orbitron font-bold text-lg text-white mb-2 group-hover:text-[#39FF14] transition-colors">
-                    {feature.title}
+                  <h3 className="text-[18px] font-bold text-black uppercase tracking-wider mb-3">
+                    {item.title}
                   </h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">{feature.desc}</p>
+                  <p className="text-[14px] font-normal text-[#707070] leading-relaxed flex-1">
+                    {item.desc}
+                  </p>
                 </div>
               </SectionObserver>
             ))}
@@ -207,27 +215,71 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── PRODUCTS ── */}
-      <section className="py-24 relative">
+      {/* 2. BRAND STORY / WHO WE ARE */}
+      <section className="relative py-[50px] overflow-hidden bg-black text-white">
+        <div className="absolute inset-0 z-0">
+          <img
+            src={urbanEbikeFleet}
+            alt="TRIP Workshop"
+            className="w-full h-full object-cover opacity-20"
+          />
+          <div className="absolute inset-0 bg-black/40" />
+        </div>
+
+        <div className="relative z-10 max-w-6xl mx-auto px-6">
+          <SectionObserver>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#00B074] mb-4">
+              Who We Are
+            </p>
+            <h2 className="text-[36px] font-bold text-white mb-16 tracking-tight leading-tight max-w-5xl">
+              We Are An E-Vehicle Company That Distributes The Highest Quality Products At A Competitive Price While Providing The Highest Level Of Customer Service
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-16 border-t border-white/10 pt-16">
+              <div className="flex gap-6 items-start">
+                <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                  <Award className="w-7 h-7 text-[#00B074]" />
+                </div>
+                <div>
+                  <p className="text-zinc-300 text-[15px] leading-relaxed">
+                    We aspire to be the premier Electronic bike distributor in the Philippines by distributing innovative products that can enrich the lives of our customers.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-6 items-start">
+                <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center shrink-0 border border-white/10">
+                  <Gem className="w-7 h-7 text-[#00B074]" />
+                </div>
+                <div>
+                  <p className="text-zinc-300 text-[15px] leading-relaxed">
+                    We commit to producing Electronic Bikes that are designed to perfectly fit your lifestyle without compromising the price and quality.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </SectionObserver>
+        </div>
+      </section>
+
+      {/* 3. FEATURED PRODUCTS */}
+      <section className="py-[50px] border-t border-black/5">
         <div className="max-w-7xl mx-auto px-6">
           <SectionObserver>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-16 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-20">
               <div>
-                <p className="section-label mb-3">Our Lineup</p>
-                <h2 className="font-orbitron font-bold text-4xl sm:text-5xl text-white">
-                  The TRIP{" "}
-                  <span className="gradient-text">Collection</span>
-                </h2>
+                <p className="section-label mb-4">Featured Models</p>
+                <h2 className="text-[36px] font-bold text-black tracking-tight leading-tight">The TRIP MOBILITY Collection</h2>
               </div>
-              <Link to="/products" className="btn-outline text-sm whitespace-nowrap flex items-center gap-2">
-                View All Models <ArrowRight className="w-4 h-4" />
+              <Link to="/products" className="text-sm font-semibold uppercase tracking-widest text-black hover:text-[#707070] transition-colors mt-6 md:mt-0 flex items-center gap-2 border-b border-black pb-1 hover:border-[#707070]">
+                View Catalog <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </SectionObserver>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {PRODUCTS.map((product, i) => (
-              <SectionObserver key={product.id} delay={i * 150}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            {productsList.slice(0, 3).map((product) => (
+              <SectionObserver key={product.id}>
                 <ProductCard
                   product={product}
                   onQuote={() => handleProductQuote(product.name)}
@@ -238,43 +290,92 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── BIKE ASSEMBLY ANIMATION ── */}
+      {/* 4. WHY CHOOSE TRIP */}
+      <section className="py-[50px] border-t border-black/5 bg-[#FAFAFA]">
+        <div className="max-w-7xl mx-auto px-6">
+          <SectionObserver>
+            <div className="text-center mb-20">
+              <p className="section-label mb-4">Unrivaled Standards</p>
+              <h2 className="text-[36px] font-bold text-black leading-tight">Why Choose TRIP MOBILITY</h2>
+            </div>
+          </SectionObserver>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                title: "4-6h / 5-6h Charge Time",
+                desc: "4-6 hours for e-bikes and 5-6 hours for e-scooters using our high-speed smart chargers.",
+                icon: Battery
+              },
+              {
+                title: "80-95 / 40-50 km/h Speed",
+                desc: "80–95 km/h peak speed for e-scooters, and 40-50 km/h for e-bikes.",
+                icon: Gauge
+              },
+              {
+                title: "Tailored Fleet Specs",
+                desc: "We offer customized configurations for cargo capacity, branding layouts, and high-capacity battery units.",
+                icon: Layers
+              },
+              {
+                title: "Up to ₱30 Per Full Charge",
+                desc: "Unmatched operational economics, saving commercial fleets and commuters thousands in transport costs daily.",
+                icon: Zap
+              },
+              {
+                title: "120km Maximum Range",
+                desc: "Long-range cells with optimized battery management systems to easily last entire commercial shifts.",
+                icon: Compass
+              },
+              {
+                title: "1-Year Domestic Warranty",
+                desc: "Direct support covering chassis, high-torque hub motor setups, and lithium battery cells.",
+                icon: Shield
+              }
+            ].map((item, i) => (
+              <SectionObserver key={i} className="h-full">
+                <div className="h-full flex flex-col border border-black/5 p-10 bg-white hover:border-black/20 hover:shadow-premium transition-all duration-500 rounded-[2px]">
+                  <div className="w-12 h-12 rounded-[2px] bg-black/5 flex items-center justify-center mb-6 group hover:bg-black transition-colors duration-300">
+                    <item.icon className="w-6 h-6 text-black group-hover:text-white transition-colors duration-300" />
+                  </div>
+                  <h3 className="text-lg font-bold text-black uppercase tracking-tight mb-4">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-[#707070] leading-relaxed flex-1">
+                    {item.desc}
+                  </p>
+                </div>
+              </SectionObserver>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 4.5 ASSEMBLED FOR PERFORMANCE */}
       <BikeAssemblyAnimation />
 
-      {/* ── CINEMATIC SHOWCASE ── */}
-      <section className="relative py-32 overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${particleBg})` }}
-        />
-        <div className="absolute inset-0 bg-[#0A0A0A]/70" />
-        <div className="relative max-w-7xl mx-auto px-6 text-center">
+
+      {/* 7. PREMIUM FEATURES */}
+      <section className="py-[50px] border-t border-black/5">
+        <div className="max-w-7xl mx-auto px-6">
           <SectionObserver>
-            <p className="section-label mb-4">Performance Metrics</p>
-            <h2 className="font-orbitron font-bold text-4xl sm:text-6xl text-white mb-6">
-              By the <span className="gradient-text">Numbers</span>
-            </h2>
-            <p className="text-gray-400 text-lg max-w-xl mx-auto mb-16">
-              Real-world performance data from 3,000+ TRIP e-bikes deployed across the Philippines.
-            </p>
+            <div className="text-center mb-20">
+              <p className="section-label mb-4">Premium Utility</p>
+              <h2 className="section-title text-black">Standard Enhancements</h2>
+            </div>
           </SectionObserver>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
-              { metric: "120km", label: "Max Single Charge Range", bar: 100 },
-              { metric: "50km/h", label: "Peak Top Speed", bar: 83 },
-              { metric: "180kg", label: "Max Payload Capacity", bar: 72 },
-            ].map((item, i) => (
-              <SectionObserver key={i} delay={i * 150}>
-                <div className="glass-green rounded-2xl p-8 text-center">
-                  <p className="font-orbitron font-black text-5xl text-[#39FF14] mb-2">{item.metric}</p>
-                  <p className="text-gray-400 text-sm mb-6">{item.label}</p>
-                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="metric-bar"
-                      style={{ width: `${item.bar}%` }}
-                    />
-                  </div>
+              { title: "Regenerative Braking", desc: "Recovers electrical energy during deceleration, expanding single-charge ranges." },
+              { title: "Anti-Theft Smart Locks", desc: "Integrated mechanical rear hub block and electronic motor isolation controllers." },
+              { title: "Real-time Fleet Tracking", desc: "Allows instant location audits, historical route mapping, and geofence alarms." },
+              { title: "Puncture Resistant Tires", desc: "Kevlar-reinforced rubber layers designed to prevent flat hazards." }
+            ].map((feat, i) => (
+              <SectionObserver key={i}>
+                <div className="border border-black/5 p-8 bg-[#FAFAFA] hover:bg-white hover:shadow-premium transition-all duration-500 h-full rounded-[2px]">
+                  <h3 className="text-sm font-bold text-black uppercase tracking-wider mb-3">{feat.title}</h3>
+                  <p className="text-sm text-[#707070] leading-relaxed">{feat.desc}</p>
                 </div>
               </SectionObserver>
             ))}
@@ -282,153 +383,107 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── USE CASES ── */}
-      <section className="py-24">
+      {/* 8. CUSTOMER BENEFITS */}
+      <section className="py-[50px] border-t border-black/5 bg-[#FAFAFA]">
         <div className="max-w-7xl mx-auto px-6">
           <SectionObserver>
-            <div className="text-center mb-16">
-              <p className="section-label mb-3">Industries We Serve</p>
-              <h2 className="font-orbitron font-bold text-4xl sm:text-5xl text-white">
-                Powering Every <span className="gradient-text">Sector</span>
-              </h2>
+            <div className="text-center mb-20">
+              <p className="section-label mb-4">Daily Impact</p>
+              <h2 className="section-title text-black">Customer Benefits</h2>
             </div>
           </SectionObserver>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <SectionObserver>
-              <div className="relative rounded-2xl overflow-hidden h-80 group">
-                <img src={useCaseDelivery} alt="Delivery" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-8">
-                  <span className="section-label mb-2 block">Delivery & Logistics</span>
-                  <h3 className="font-orbitron font-bold text-2xl text-white mb-2">Built for the Last Mile</h3>
-                  <p className="text-gray-300 text-sm mb-4">100+ km range powers full delivery shifts without stops</p>
-                  <Link to="/industries" className="btn-compact-primary">
-                    Learn More <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-            </SectionObserver>
-
-            <SectionObserver delay={150}>
-              <div className="relative rounded-2xl overflow-hidden h-80 group">
-                <img src={useCaseCorporate} alt="Corporate" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent" />
-                <div className="absolute bottom-0 left-0 p-8">
-                  <span className="section-label mb-2 block">Corporate & Enterprise</span>
-                  <h3 className="font-orbitron font-bold text-2xl text-white mb-2">Fleet Solutions at Scale</h3>
-                  <p className="text-gray-300 text-sm mb-4">Custom branding, centralized management, dedicated support</p>
-                  <Link to="/industries" className="btn-compact-primary">
-                    Learn More <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </div>
-            </SectionObserver>
-          </div>
-
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
             {[
-              { label: "Government", icon: Landmark, color: "hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(168,85,247,0.25)]" },
-              { label: "Tourism & Resorts", icon: Compass, color: "hover:border-cyan-500/50 hover:shadow-[0_0_30px_rgba(6,182,212,0.25)]" },
-              { label: "Universities", icon: GraduationCap, color: "hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.25)]" },
-              { label: "Logistics", icon: Truck, color: "hover:border-[#39FF14]/50 hover:shadow-[0_0_30px_rgba(57,255,20,0.25)]" },
-            ].map((item, i) => (
-              <SectionObserver key={i} delay={i * 80}>
-                <Link
-                  to="/industries"
-                  className={`glass rounded-xl p-6 text-center border border-white/5 transition-all duration-300 group block hover:scale-[1.03] ${item.color}`}
-                >
-                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-[#39FF14]/10 group-hover:border-[#39FF14]/30 transition-all duration-300">
-                    <item.icon className="w-6 h-6 text-gray-400 group-hover:text-[#39FF14] group-hover:scale-110 transition-all duration-300" />
-                  </div>
-                  <p className="text-sm text-gray-300 group-hover:text-white font-orbitron font-bold tracking-wide transition-colors">
-                    {item.label}
-                  </p>
-                </Link>
+              { title: "Commute Efficiency", desc: "Bypass traffic congestion with access to bicycle path lanes." },
+              { title: "Low Maintenance Cost", desc: "No complex engines, oil replacements, or timing belt adjustments." },
+              { title: "Eco-Friendly Operations", desc: "Zero exhaust output allows zero-emission urban supply distributions." },
+              { title: "Physical Wellness", desc: "Enables active exercise routines with customizable pedal-assist modes." },
+              { title: "Stress Relief", desc: "Escape high traffic jams, fuel price spikes, and route cancellations." },
+              { title: "Flexible Parking", desc: "Compact footprint allows easy lockups in narrow slots and corridors." },
+              { title: "Urban Reach", desc: "Increases courier transit radius and overall daily delivery counts." },
+              { title: "Reliability", desc: "Heavy-duty parts designed to secure continuous operation all season." }
+            ].map((benefit, i) => (
+              <SectionObserver key={i}>
+                <div className="border border-black/5 bg-white p-8 hover:border-black/20 hover:shadow-premium transition-all duration-500 rounded-[2px] h-full">
+                  <h3 className="text-sm font-bold text-black uppercase tracking-wider mb-3">{benefit.title}</h3>
+                  <p className="text-sm text-[#707070] leading-relaxed">{benefit.desc}</p>
+                </div>
               </SectionObserver>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── SUSTAINABILITY ── */}
-      <section className="relative py-24 overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${sustainabilityBg})` }}
-        />
-        <div className="absolute inset-0 bg-[#0A0A0A]/85" />
-        <div className="relative max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <SectionObserver>
-              <p className="section-label mb-4">Sustainability</p>
-              <h2 className="font-orbitron font-bold text-4xl sm:text-5xl text-white mb-6">
-                Riding Towards a <span className="gradient-text">Greener PH</span>
-              </h2>
-              <p className="text-gray-400 text-lg leading-relaxed mb-8">
-                Every TRIP e-bike on the road removes a petrol motorbike that emits 2.5kg of CO₂ per day. Our mission is to electrify 100,000 journeys across the Philippines by 2027.
-              </p>
-              <div className="space-y-4">
-                {[
-                  "1.2 tons of CO₂ saved per bike annually",
-                  "Zero tailpipe emissions in Philippine cities",
-                  "Recyclable lithium-ion battery program",
-                  "Solar charging partnerships in development",
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-[#39FF14] shrink-0" />
-                    <p className="text-gray-300 text-sm">{item}</p>
-                  </div>
-                ))}
-              </div>
-            </SectionObserver>
 
-            <SectionObserver delay={200}>
-              <div className="grid grid-cols-2 gap-4">
-                {[
-                  { value: "3,600+", label: "Tons CO₂ Saved", color: "from-green-500/20" },
-                  { value: "100K", label: "Goal by 2027", color: "from-cyan-500/20" },
-                  { value: "₱0", label: "Fuel Cost/Day", color: "from-yellow-500/20" },
-                  { value: "12 LGUs", label: "Government Partners", color: "from-purple-500/20" },
-                ].map((item, i) => (
-                  <div key={i} className={`glass rounded-xl p-6 bg-gradient-to-br ${item.color} to-transparent border border-white/5`}>
-                    <p className="font-orbitron font-black text-3xl text-[#39FF14] mb-1">{item.value}</p>
-                    <p className="text-xs text-gray-400">{item.label}</p>
-                  </div>
-                ))}
-              </div>
-            </SectionObserver>
-          </div>
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ── */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-6">
+      {/* 10. COMPARISON */}
+      <section className="py-[50px] border-t border-black/5 bg-[#FAFAFA]">
+        <div className="max-w-5xl mx-auto px-6">
           <SectionObserver>
-            <div className="text-center mb-16">
-              <p className="section-label mb-3">Customer Stories</p>
-              <h2 className="font-orbitron font-bold text-4xl sm:text-5xl text-white">
-                Trusted by <span className="gradient-text">Thousands</span>
-              </h2>
+            <div className="text-center mb-20">
+              <p className="section-label mb-4">Comparison Audit</p>
+              <h2 className="section-title text-black">E-Bike vs Motor-Bike</h2>
             </div>
           </SectionObserver>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {MOCK_TESTIMONIALS.map((t, i) => (
-              <SectionObserver key={t.id} delay={i * 100}>
-                <div className="glass rounded-xl p-6 border border-white/5 hover:border-[#39FF14]/20 transition-all h-full flex flex-col">
-                  <Quote className="w-6 h-6 text-[#39FF14]/40 mb-3" />
-                  <p className="text-gray-300 text-sm leading-relaxed mb-6 flex-1">{t.review}</p>
+          <SectionObserver>
+            <div className="overflow-x-auto border border-black/10 bg-white rounded-[2px] shadow-sm">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-black/10 bg-[#FAFAFA]">
+                    <th className="p-6 text-xs font-bold text-black uppercase tracking-wider">Features</th>
+                    <th className="p-6 text-xs font-bold text-black uppercase tracking-wider">TRIP E-Bike</th>
+                    <th className="p-6 text-xs font-bold text-[#707070] uppercase tracking-wider">Gasoline Motorbike</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-black/5">
+                  {[
+                    { feature: "Operating Cost", ebike: "Approximately ₱30 per full charge", motor: "Php 50-100+ per 100km" },
+                    { feature: "TRIP Electric Bikes", ebike: "No driver's license required.", motor: "Mandatory LTO plate & license" },
+                    { feature: "TRIP Electric Scooters (S90 & E4)", ebike: "Driver's license is required.", motor: "Mandatory LTO plate & license" },
+                    { feature: "Exhaust Emissions", ebike: "Zero greenhouse output", motor: "Constant carbon monoxide emissions" },
+                    { feature: "Maintenance Standard", ebike: "Minimal brake pad & tire changes", motor: "Frequent engine oil, filters & plug tuneups" },
+                    { feature: "Corridor Access", ebike: "Permitted on bike paths & green zones", motor: "Strictly limited to vehicular roads" }
+                  ].map((row, idx) => (
+                    <tr key={idx} className="hover:bg-[#FAFAFA] transition-colors">
+                      <td className="p-6 text-sm text-black font-semibold uppercase tracking-wider">{row.feature}</td>
+                      <td className="p-6 text-sm text-black font-medium">{row.ebike}</td>
+                      <td className="p-6 text-sm text-[#707070]">{row.motor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionObserver>
+        </div>
+      </section>
+
+      {/* 11. TESTIMONIALS */}
+      <section className="py-[50px] border-t border-black/5">
+        <div className="max-w-7xl mx-auto px-6">
+          <SectionObserver>
+            <div className="text-center mb-20">
+              <p className="section-label mb-4">Client Verifications</p>
+              <h2 className="section-title text-black">Trusted by Thousands</h2>
+            </div>
+          </SectionObserver>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {MOCK_TESTIMONIALS.map((t) => (
+              <SectionObserver key={t.id}>
+                <div className="border border-black/5 p-8 bg-[#FAFAFA] flex flex-col justify-between h-full rounded-[2px]">
                   <div>
-                    <div className="flex mb-3">
+                    <Quote className="w-6 h-6 text-black/20 mb-6" />
+                    <p className="text-black text-sm leading-relaxed mb-8 font-medium">"{t.review}"</p>
+                  </div>
+                  <div>
+                    <div className="flex gap-1 mb-4">
                       {Array.from({ length: t.rating }).map((_, j) => (
-                        <Star key={j} className="w-4 h-4 text-[#39FF14] fill-[#39FF14]" />
+                        <Star key={j} className="w-4 h-4 text-black fill-black" />
                       ))}
                     </div>
-                    <p className="font-semibold text-white text-sm">{t.name}</p>
-                    <p className="text-xs text-gray-500">{t.role} · {t.company}</p>
-                    <p className="text-xs text-[#39FF14] mt-1">{t.product}</p>
+                    <p className="font-bold text-black text-sm uppercase tracking-wider mb-1">{t.name}</p>
+                    <p className="text-xs font-semibold text-[#707070] uppercase tracking-widest">{t.role} · {t.company}</p>
                   </div>
                 </div>
               </SectionObserver>
@@ -437,92 +492,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── FINANCING PREVIEW ── */}
-      <section className="py-24 bg-[#0D0D0D]">
-        <div className="max-w-7xl mx-auto px-6">
-          <SectionObserver>
-            <div className="text-center mb-16">
-              <p className="section-label mb-3">Flexible Financing</p>
-              <h2 className="font-orbitron font-bold text-4xl sm:text-5xl text-white">
-                Own a TRIP E-Bike <span className="gradient-text">Your Way</span>
-              </h2>
-              <p className="text-gray-400 mt-4 max-w-xl mx-auto">
-                From individual riders to enterprise fleets — we have financing options that make owning a TRIP e-bike accessible.
-              </p>
-            </div>
-          </SectionObserver>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {FINANCING_OPTIONS.map((option, i) => (
-              <SectionObserver key={option.id} delay={i * 120}>
-                <div
-                  className={`rounded-2xl p-8 h-full flex flex-col transition-all duration-500 ${
-                    option.highlight
-                      ? "glass-green border border-[#39FF14]/30 relative"
-                      : "glass border border-white/5"
-                  }`}
-                >
-                  {option.highlight && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-[#39FF14] text-[#0A0A0A] text-xs font-bold rounded-full uppercase">
-                      Most Popular
-                    </div>
-                  )}
-                  <div className="mb-6">
-                    <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">{option.target}</p>
-                    <h3 className="font-orbitron font-bold text-2xl text-white">{option.title}</h3>
-                    <p className="text-sm text-gray-400 mt-2">
-                      <span className="text-[#39FF14] font-semibold">{option.downPayment}</span> down · {option.terms}
-                    </p>
-                  </div>
-                  <ul className="space-y-3 flex-1">
-                    {option.features.map((feat, j) => (
-                      <li key={j} className="flex items-start gap-2 text-sm text-gray-300">
-                        <CheckCircle className="w-4 h-4 text-[#39FF14] shrink-0 mt-0.5" />
-                        {feat}
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    onClick={() => setQuoteOpen(true)}
-                    className={`mt-8 w-full ${option.highlight ? "btn-primary" : "btn-outline"} text-sm`}
-                  >
-                    Get This Plan
-                  </button>
-                </div>
-              </SectionObserver>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA ── */}
-      <section className="py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#39FF14]/10 via-transparent to-[#00FFFF]/8" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#39FF14]/5 rounded-full blur-[80px]" />
-        <div className="relative max-w-4xl mx-auto px-6 text-center">
-          <SectionObserver>
-            <p className="section-label mb-4">Ready to Go Electric?</p>
-            <h2 className="font-orbitron font-black text-5xl sm:text-6xl text-white mb-6">
-              Your Journey Starts <span className="gradient-text">Here.</span>
-            </h2>
-            <p className="text-gray-400 text-lg mb-10 max-w-xl mx-auto">
-              Talk to a TRIP e-mobility expert today. Get a personalized quote, discover our financing options, and join the Philippine E-Mobility revolution.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => setQuoteOpen(true)}
-                className="btn-primary text-sm flex items-center justify-center gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                Get a Personalized Quote
-              </button>
-              <Link to="/contact" className="btn-outline text-sm">
-                Contact Our Team
-              </Link>
-            </div>
-          </SectionObserver>
-        </div>
-      </section>
 
       <QuoteModal
         open={quoteOpen}
@@ -530,11 +500,10 @@ export default function HomePage() {
         preselectedProduct={selectedProduct}
       />
 
-      {/* Product comparison - available from homepage cards too */}
       <CompareBar onOpen={() => {
-        // Navigate to products page to see full comparison
-        window.location.href = '/products';
+        window.location.href = '/compare';
       }} />
     </div>
   );
 }
+

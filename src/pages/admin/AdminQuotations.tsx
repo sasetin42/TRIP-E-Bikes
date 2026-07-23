@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface Quotation {
   id: string;
@@ -138,7 +139,7 @@ export default function AdminQuotations() {
         <button
           onClick={fetchQuotations}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           Refresh
@@ -153,7 +154,7 @@ export default function AdminQuotations() {
             <button
               key={s}
               onClick={() => setFilterStatus(filterStatus === s ? "all" : s)}
-              className={`glass rounded-xl p-4 border text-left transition-all ${filterStatus === s ? cfg.border + " " + cfg.bg : "border-white/5 hover:border-white/10"}`}
+              className={`bg-white/5 backdrop-blur-md rounded-xl p-4 border text-left transition-all ${filterStatus === s ? cfg.border + " " + cfg.bg : "border-white/5 hover:border-white/10"}`}
             >
               <p className={`font-orbitron font-bold text-2xl mb-1 ${cfg.color}`}>{counts[s] || 0}</p>
               <p className="text-xs text-gray-500">{cfg.label}</p>
@@ -168,22 +169,24 @@ export default function AdminQuotations() {
           <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            id="admin-quotations-search"
+            name="search"
             placeholder="Search by product or notes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#39FF14]/30 transition-all"
           />
         </div>
-        <select
+        <CustomSelect
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-[#111] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#39FF14]/30"
-        >
-          <option value="all">All Statuses</option>
-          {STATUS_ORDER.map((s) => (
-            <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
-          ))}
-        </select>
+          onChange={setFilterStatus}
+          options={[
+            { value: "all", label: "All Statuses" },
+            ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS_CONFIG[s].label }))
+          ]}
+          size="sm"
+          className="w-48"
+        />
       </div>
 
       {/* List */}
@@ -210,7 +213,7 @@ export default function AdminQuotations() {
             const isEditing = editingId === q.id;
 
             return (
-              <div key={q.id} className={`glass rounded-xl border transition-all ${isExpanded ? "border-white/15" : "border-white/5 hover:border-white/10"}`}>
+              <div key={q.id} className={`bg-white/5 backdrop-blur-md rounded-xl border transition-all ${isExpanded ? "border-white/15" : "border-white/5 hover:border-white/10"}`}>
                 {/* Row header */}
                 <div className="flex items-center gap-4 p-5">
                   <div className="w-10 h-10 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center shrink-0">
@@ -236,14 +239,14 @@ export default function AdminQuotations() {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => openEditor(q)}
-                      className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-[#39FF14] hover:border-[#39FF14]/30 transition-all"
+                      className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-[#39FF14] hover:border-[#39FF14]/30 transition-all"
                       title="Edit quotation"
                     >
                       <MessageSquare className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setExpandedId(isExpanded ? null : q.id)}
-                      className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-white transition-all"
+                      className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-white transition-all"
                     >
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </button>
@@ -292,23 +295,22 @@ export default function AdminQuotations() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Status</label>
-                        <select
+                        <label htmlFor="admin-quotations-status" className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide">Status</label>
+                        <CustomSelect
                           value={editForm.status}
-                          onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                          className="w-full bg-[#111] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#39FF14]/50"
-                        >
-                          {STATUS_ORDER.map((s) => (
-                            <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
-                          ))}
-                        </select>
+                          onChange={(v) => setEditForm({ ...editForm, status: v })}
+                          options={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_CONFIG[s].label }))}
+                          size="md"
+                        />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                        <label htmlFor="admin-quotations-price" className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
                           <DollarSign className="w-3 h-3" /> Estimated Price (PHP)
                         </label>
                         <input
                           type="number"
+                          id="admin-quotations-price"
+                          name="estimated_price"
                           value={editForm.estimated_price}
                           onChange={(e) => setEditForm({ ...editForm, estimated_price: e.target.value })}
                           placeholder="e.g. 285000"
@@ -316,11 +318,13 @@ export default function AdminQuotations() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                        <label htmlFor="admin-quotations-valid-until" className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
                           <Calendar className="w-3 h-3" /> Quote Valid Until
                         </label>
                         <input
                           type="date"
+                          id="admin-quotations-valid-until"
+                          name="valid_until"
                           value={editForm.valid_until}
                           onChange={(e) => setEditForm({ ...editForm, valid_until: e.target.value })}
                           className="w-full bg-white/4 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#39FF14]/50 transition-all"
@@ -328,11 +332,13 @@ export default function AdminQuotations() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                        <label htmlFor="admin-quotations-assigned-sales" className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
                           <User className="w-3 h-3" /> Assigned Sales Rep
                         </label>
                         <input
                           type="text"
+                          id="admin-quotations-assigned-sales"
+                          name="assigned_sales"
                           value={editForm.assigned_sales}
                           onChange={(e) => setEditForm({ ...editForm, assigned_sales: e.target.value })}
                           placeholder="e.g. Maria Santos"
@@ -341,10 +347,12 @@ export default function AdminQuotations() {
                       </div>
                     </div>
                     <div className="mb-4">
-                      <label className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                      <label htmlFor="admin-quotations-sales-notes" className="block text-xs text-gray-400 mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
                         <MessageSquare className="w-3 h-3" /> Sales Notes <span className="text-[#39FF14]">(visible to customer in their dashboard)</span>
                       </label>
                       <textarea
+                        id="admin-quotations-sales-notes"
+                        name="sales_notes"
                         value={editForm.sales_notes}
                         onChange={(e) => setEditForm({ ...editForm, sales_notes: e.target.value })}
                         placeholder="e.g. Proposal attached. Price includes free delivery and 1-year service plan..."
@@ -358,7 +366,7 @@ export default function AdminQuotations() {
                           const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>TRIP Admin Quotation #${editingId?.slice(0,8).toUpperCase()}</title><style>body{background:#0A0A0A;color:#F5F5F5;font-family:'Helvetica Neue',Arial,sans-serif;margin:0;padding:40px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}</style></head><body><div style="text-align:center;margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.1)"><div style="display:inline-block;background:rgba(57,255,20,0.08);border:1px solid rgba(57,255,20,0.25);border-radius:12px;padding:10px 24px;margin-bottom:16px"><span style="color:#39FF14;font-size:22px;font-weight:900;letter-spacing:4px">⚡ TRIP MOBILITY</span></div><h1 style="color:#FFF;font-size:20px;margin:8px 0 4px">Admin Quotation Summary</h1><p style="color:#6B7280;font-size:13px;margin:0">Ref: #${editingId?.slice(0,8).toUpperCase()} · ${new Date().toLocaleDateString('en-PH',{year:'numeric',month:'long',day:'numeric'})}</p></div>${editForm.estimated_price ? `<div style="background:#111;border:1px solid rgba(57,255,20,0.2);border-radius:16px;padding:24px;margin-bottom:20px;text-align:center"><p style="color:#9CA3AF;font-size:11px;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Estimated Price</p><p style="color:#39FF14;font-size:40px;font-weight:900;margin:0;font-family:monospace">₱${parseFloat(editForm.estimated_price).toLocaleString()}</p>${editForm.valid_until ? `<p style="color:#6B7280;font-size:12px;margin:8px 0 0">Valid until ${editForm.valid_until}</p>` : ''}</div>` : ''}<div style="background:#111;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;margin-bottom:20px"><h2 style="color:#39FF14;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin:0 0 16px">Quotation Details</h2><table style="width:100%;border-collapse:collapse">${[['Status',editForm.status.replace(/_/g,' ').replace(/\b\w/g,(c)=>c.toUpperCase())],['Assigned Sales',editForm.assigned_sales||'Not assigned'],['Valid Until',editForm.valid_until||'Not set']].map(([l,v])=>`<tr><td style="padding:8px 12px;color:#9CA3AF;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05)">${l}</td><td style="padding:8px 12px;color:#F5F5F5;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05)">${v}</td></tr>`).join('')}</table></div>${editForm.sales_notes ? `<div style="background:#111;border:1px solid rgba(57,255,20,0.15);border-radius:16px;padding:20px 24px;margin-bottom:20px"><h2 style="color:#39FF14;font-size:11px;letter-spacing:3px;text-transform:uppercase;margin:0 0 12px">Sales Notes</h2><p style="color:#D1D5DB;font-size:14px;line-height:1.7;font-style:italic">&ldquo;${editForm.sales_notes}&rdquo;</p></div>` : ''}<div style="text-align:center;margin-top:32px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08)"><p style="color:#6B7280;font-size:12px">TRIP Mobility · Internal Document · Customer Portal: tripmobility.ph/my-quotes</p></div></body></html>`;
                           const w = window.open('','_blank'); if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);}
                         }}
-                        className="flex items-center gap-1.5 px-3 py-2 glass rounded-lg border border-white/10 text-xs text-gray-400 hover:text-white transition-all"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-xs text-gray-400 hover:text-white transition-all"
                       >
                         <Download className="w-3.5 h-3.5" />PDF
                       </button>
@@ -382,3 +390,4 @@ export default function AdminQuotations() {
     </div>
   );
 }
+

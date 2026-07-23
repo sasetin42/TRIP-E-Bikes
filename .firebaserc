@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "trip-e-bikes"
+  },
+  "targets": {
+    "trip-e-bikes": {
+      "hosting": {
+        "trip-e-bikes": [
+          "trip-e-bikes"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

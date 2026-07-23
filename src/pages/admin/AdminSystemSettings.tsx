@@ -5,6 +5,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 type TabType = "features" | "general" | "appearance" | "smtp" | "security";
 
@@ -73,12 +75,14 @@ export default function AdminSystemSettings() {
       const k = row.key;
       const val = row.value;
 
-      if (k.endsWith("_enabled")) {
+      if (k.endsWith("_enabled") || k === "hide_prices") {
         featureList.push({
           key: k,
           value: val === true || val === "true" || val === 1,
-          label: k.replace(/_enabled$/, "").replace(/_/g, " "),
-          description: row.description || `Toggle ${k.replace(/_/g, " ")} feature`,
+          label: k === "hide_prices" ? "Hide Prices (Quotation Mode)" : k.replace(/_enabled$/, "").replace(/_/g, " "),
+          description: k === "hide_prices" 
+            ? "Globally hide e-bike prices and starting-at details across the public site"
+            : row.description || `Toggle ${k.replace(/_/g, " ")} feature`,
         });
       } else {
         const strVal = typeof val === "object" ? JSON.stringify(val) : String(val ?? "");
@@ -115,6 +119,16 @@ export default function AdminSystemSettings() {
         { key: "referral_enabled", value: true, label: "Referral Tracking", description: "Generate dynamic sharing hashes for customers" }
       );
     }
+    
+    if (!featureList.some((f) => f.key === "hide_prices")) {
+      featureList.push({
+        key: "hide_prices",
+        value: true,
+        label: "Hide Prices (Quotation Mode)",
+        description: "Globally hide e-bike prices and starting-at details across the public site",
+      });
+    }
+
     setFeatures(featureList);
     setLoading(false);
   }, []);
@@ -128,6 +142,13 @@ export default function AdminSystemSettings() {
       updated_at: new Date().toISOString(),
     });
     if (error) throw new Error(error.message);
+
+    try {
+      const docRef = doc(db, "settings", "system");
+      await setDoc(docRef, { [key]: value }, { merge: true });
+    } catch (fsErr) {
+      console.error("Failed to sync setting to Firestore:", fsErr);
+    }
   };
 
   const saveSection = async () => {

@@ -25,7 +25,7 @@ interface Lead {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="glass rounded-xl border border-white/10 px-4 py-3 text-xs shadow-2xl">
+      <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 px-4 py-3 text-xs shadow-2xl">
         <p className="text-gray-400 mb-1">{label}</p>
         <p className="text-[#39FF14] font-bold text-sm">{payload[0].value} {payload[0].name || "leads"}</p>
       </div>
@@ -37,7 +37,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const RevenueTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="glass rounded-xl border border-white/10 px-4 py-3 text-xs shadow-2xl">
+      <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/10 px-4 py-3 text-xs shadow-2xl">
         <p className="text-gray-400 mb-1">{label}</p>
         {payload.map((p: any, i: number) => (
           <p key={i} style={{ color: p.color }} className="font-bold text-sm">
@@ -228,13 +228,13 @@ export default function AdminAnalytics() {
             Last updated {lastUpdated.toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })} · Auto-refreshes every 30s
           </p>
         </div>
-        <button onClick={fetchData} disabled={loading} className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all">
+        <button onClick={fetchData} disabled={loading} className="flex items-center gap-2 px-4 py-2.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />Refresh
         </button>
       </div>
 
       {loading && leads.length === 0 ? (
-        <div className="flex items-center justify-center py-24 gap-3">
+        <div className="flex items-center justify-center py-[50px] gap-3">
           <Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" />
           <p className="text-gray-500">Loading analytics...</p>
         </div>
@@ -249,7 +249,7 @@ export default function AdminAnalytics() {
               { label: "Total Revenue",    value: totalRevenue > 0 ? `₱${(totalRevenue/1000).toFixed(0)}K` : "₱0", icon: DollarSign, color: "text-yellow-400", trend: "Approved quotes" },
               { label: "Avg Rating",       value: avgRating,        icon: Star,        color: "text-orange-400",  trend: `${reviews.length} reviews` },
             ].map((kpi, i) => (
-              <div key={i} className="glass rounded-xl p-5 border border-white/5 hover:border-white/10 transition-all">
+              <div key={i} className="bg-white/5 backdrop-blur-md rounded-xl p-5 border border-white/5 hover:border-white/10 transition-all">
                 <div className="flex items-start justify-between mb-3">
                   <div className="w-9 h-9 rounded-xl bg-white/5 border border-white/8 flex items-center justify-center">
                     <kpi.icon className={`w-4 h-4 ${kpi.color}`} />
@@ -265,7 +265,7 @@ export default function AdminAnalytics() {
 
           {/* Row 1: 30-day trend + Lead Score Gauge */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 glass rounded-xl p-6 border border-white/5">
+            <div className="lg:col-span-2 bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="font-semibold text-white text-sm">30-Day Lead Trend</h3>
@@ -298,7 +298,7 @@ export default function AdminAnalytics() {
             </div>
 
             {/* Avg Lead Score Gauge */}
-            <div className="glass rounded-xl p-6 border border-white/5 flex flex-col">
+            <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5 flex flex-col">
               <h3 className="font-semibold text-white text-sm mb-1">Average Lead Score</h3>
               <p className="text-xs text-gray-500 mb-4">Quality index across all leads</p>
               <div className="flex-1 flex flex-col items-center justify-center">
@@ -334,7 +334,7 @@ export default function AdminAnalytics() {
           </div>
 
           {/* Row 2: Monthly Revenue Trend */}
-          <div className="glass rounded-xl p-6 border border-white/5">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="font-semibold text-white text-sm flex items-center gap-2">
@@ -372,7 +372,7 @@ export default function AdminAnalytics() {
 
           {/* Row 3: Product Interest + Funnel */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 glass rounded-xl p-6 border border-white/5">
+            <div className="lg:col-span-2 bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
               <h3 className="font-semibold text-white text-sm mb-1">Top Product Interest</h3>
               <p className="text-xs text-gray-500 mb-6">Quote requests by e-bike model</p>
               {productData.length === 0 ? (
@@ -393,7 +393,7 @@ export default function AdminAnalytics() {
               )}
             </div>
 
-            <div className="glass rounded-xl p-6 border border-white/5 flex flex-col">
+            <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5 flex flex-col">
               <h3 className="font-semibold text-white text-sm mb-1">Conversion Funnel</h3>
               <p className="text-xs text-gray-500 mb-6">Leads → Quotations → Won</p>
               <div className="flex-1 space-y-3">
@@ -420,7 +420,7 @@ export default function AdminAnalytics() {
           {/* Row 4: Service Center Pie + Loyalty Tiers */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Service Center Pie */}
-            <div className="glass rounded-xl p-6 border border-white/5">
+            <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
               <div className="flex items-center gap-2 mb-5">
                 <Wrench className="w-4 h-4 text-[#00FFFF]" />
                 <div>
@@ -458,7 +458,7 @@ export default function AdminAnalytics() {
             </div>
 
             {/* Loyalty Tier Breakdown */}
-            <div className="glass rounded-xl p-6 border border-white/5">
+            <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
               <div className="flex items-center gap-2 mb-5">
                 <Award className="w-4 h-4 text-yellow-400" />
                 <div>
@@ -511,7 +511,7 @@ export default function AdminAnalytics() {
           </div>
 
           {/* Row 5: Review Rating Trend */}
-          <div className="glass rounded-xl p-6 border border-white/5">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 text-orange-400" />
@@ -541,7 +541,7 @@ export default function AdminAnalytics() {
           </div>
 
           {/* Row 6: Geographic / Source Distribution */}
-          <div className="glass rounded-xl p-6 border border-white/5">
+          <div className="bg-white/5 backdrop-blur-md rounded-xl p-6 border border-white/5">
             <div className="flex items-center gap-3 mb-6">
               <MapPin className="w-5 h-5 text-[#39FF14]" />
               <div>
@@ -581,3 +581,4 @@ export default function AdminAnalytics() {
     </div>
   );
 }
+

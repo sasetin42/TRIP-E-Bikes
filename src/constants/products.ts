@@ -1,133 +1,8 @@
 import type { Product } from "@/types";
-import bikeDelivery from "@/assets/bike-delivery.jpg";
-import bikeFolding from "@/assets/bike-folding.jpg";
-import bikeMountain from "@/assets/bike-mountain.jpg";
+import { db } from "@/lib/firebase";
+import { collection, getDocs, query, orderBy } from "firebase/firestore";
 
-export const PRODUCTS: Product[] = [
-  {
-    id: "delivery-ebike",
-    name: "TRIP Cargo Pro",
-    tagline: "Engineered for the Last Mile",
-    description:
-      "The TRIP Cargo Pro combines raw power, extreme durability, and intelligent design to dominate last-mile delivery. Dual 48V batteries deliver an unprecedented 100–120 km range — enabling full shifts without recharging.",
-    price: 65000,
-    category: "delivery",
-    image: bikeDelivery,
-    badge: "Best Seller",
-    specs: {
-      motor: "500W Rear Hub Motor",
-      battery: "Dual 48V 11.6Ah Lithium-Ion",
-      range: "100–120 km",
-      topSpeed: "45 km/h",
-      weight: "32 kg",
-      payload: "180 kg max",
-      chargeTime: "5–6 hours",
-      frame: "High-tensile Steel Alloy",
-      brakes: "Hydraulic Disc Brakes",
-      tires: "26\" × 4.0\" Fat Tires",
-    },
-    features: [
-      "Dual battery system for extended range",
-      "Heavy-duty rear cargo rack (50kg rated)",
-      "Waterproof IP65-rated electronics",
-      "5-level pedal assist + full throttle",
-      "LCD smart display with GPS module",
-      "Anti-theft alarm system",
-      "Puncture-resistant CST fat tires",
-      "Front suspension fork with lockout",
-    ],
-    useCases: [
-      "Food delivery platforms",
-      "Courier and logistics services",
-      "E-commerce last-mile delivery",
-      "Grocery and pharmacy delivery",
-    ],
-    colors: ["Stealth Black", "Carbon Gray", "Deep Forest Green"],
-    inStock: true,
-  },
-  {
-    id: "folding-ebike",
-    name: "TRIP Fold X",
-    tagline: "Compact Power, Limitless Freedom",
-    description:
-      "The TRIP Fold X redefines commuter versatility. Its innovative folding mechanism collapses in 5 seconds, fitting in any vehicle, MRT cargo area, or office corner. Powerful fat tires conquer any Philippine road condition.",
-    price: 57000,
-    category: "folding",
-    image: bikeFolding,
-    badge: "Most Versatile",
-    specs: {
-      motor: "500W Rear Hub Motor",
-      battery: "48V 11.6Ah Lithium-Ion",
-      range: "40–50 km",
-      topSpeed: "40 km/h",
-      weight: "24 kg",
-      payload: "120 kg max",
-      chargeTime: "4–5 hours",
-      frame: "Aerospace Aluminum Alloy",
-      brakes: "Mechanical Disc Brakes",
-      tires: '20" × 4.0" Fat Tires',
-    },
-    features: [
-      "Quick-fold mechanism in under 5 seconds",
-      "Lightweight aerospace aluminum frame",
-      "Removable & lockable battery",
-      "5-level pedal assist + throttle mode",
-      "Integrated LED headlight & tail light",
-      "Adjustable stem and seat post",
-      "Shimano 7-speed gear system",
-      "Compact storage: 90cm folded length",
-    ],
-    useCases: [
-      "Urban commuters",
-      "Multi-modal transport users",
-      "Tourism and resort guests",
-      "University students",
-    ],
-    colors: ["Midnight Black", "Arctic Silver", "Ocean Blue"],
-    inStock: true,
-  },
-  {
-    id: "mountain-ebike",
-    name: "TRIP Ranger 750",
-    tagline: "Conquer Every Terrain",
-    description:
-      "The TRIP Ranger 750 is built for those who refuse to be stopped by any terrain. A 750W motor delivers torque that handles steep mountain inclines and rough Philippine terrain with absolute confidence.",
-    price: 59000,
-    category: "mountain",
-    image: bikeMountain,
-    badge: "Most Powerful",
-    specs: {
-      motor: "750W Rear Hub Motor",
-      battery: "48V 11.6Ah Lithium-Ion",
-      range: "50–60 km",
-      topSpeed: "50 km/h",
-      weight: "30 kg",
-      payload: "150 kg max",
-      chargeTime: "5–6 hours",
-      frame: "Steel Alloy MTB Frame",
-      brakes: "Hydraulic Disc Brakes",
-      tires: '26" × 4.0" All-Terrain Fat Tires',
-    },
-    features: [
-      "750W high-torque motor for steep climbs",
-      "Full suspension front fork",
-      "7-speed Shimano drivetrain",
-      "Hydraulic disc brakes front & rear",
-      "IP65 waterproof motor controller",
-      "Thumb throttle + 5-level PAS",
-      "Ergonomic MTB saddle & grips",
-      "Reinforced steel alloy mountain frame",
-    ],
-    useCases: [
-      "Mountain and trail riding",
-      "Resort and eco-tourism mobility",
-      "Government patrol units",
-      "Adventure and recreation",
-    ],
-    colors: ["Matte Black", "Ranger Green", "Steel Gray"],
-    inStock: true,
-  },
-];
+export let PRODUCTS: Product[] = [];
 
 export const PRODUCT_CATEGORIES = [
   { id: "all", label: "All Models" },
@@ -135,3 +10,59 @@ export const PRODUCT_CATEGORIES = [
   { id: "folding", label: "Folding" },
   { id: "mountain", label: "Mountain" },
 ];
+
+export const syncLiveProducts = async (): Promise<Product[]> => {
+  try {
+    const q = query(collection(db, "products_cms"), orderBy("created_at", "desc"));
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      const liveList = snapshot.docs
+        .map((d) => {
+          const p = d.data() as any;
+          const cat = (p.category || "").toLowerCase();
+          return {
+            id: p.product_key || d.id,
+            name: p.name || "",
+            tagline: p.tagline || "",
+            description: p.description || "",
+            price: Number(p.price) || 0,
+            category:
+              cat.includes("cargo") || cat.includes("delivery")
+                ? "delivery"
+                : cat.includes("fold")
+                ? "folding"
+                : "mountain",
+            image: p.primary_image_url || p.gallery_images?.[0] || "",
+            badge: p.badge || null,
+            brochureUrl: p.brochure_url || null,
+            videoUrl: p.video_url || null,
+            specs: {
+              motor: p.specs?.motor || "",
+              battery: p.specs?.battery || "",
+              range: p.specs?.range || "",
+              topSpeed: p.specs?.topSpeed || p.specs?.top_speed || "",
+              weight: p.specs?.weight || "",
+              payload: p.specs?.payload || "",
+              chargeTime: p.specs?.chargeTime || p.specs?.chargingTime || p.specs?.charge_time || "",
+              frame: p.specs?.frame || "",
+              brakes: p.specs?.brakes || "",
+              tires: p.specs?.tires || "",
+            },
+            features: p.features || [],
+            useCases: p.use_cases || p.useCases || [],
+            colors: p.colors || [],
+            inStock: p.in_stock !== undefined ? p.in_stock : true,
+            published: p.published !== undefined ? p.published : true,
+            galleryImages: p.gallery_images || [],
+          } as any;
+        })
+        .filter((item) => item.published !== false);
+
+      PRODUCTS.length = 0;
+      liveList.forEach((item) => PRODUCTS.push(item as Product));
+    }
+  } catch (e) {
+    console.error("Failed to sync live products:", e);
+  }
+  return PRODUCTS;
+};

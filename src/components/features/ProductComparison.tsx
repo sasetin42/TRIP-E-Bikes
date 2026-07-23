@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { PRODUCTS } from "@/constants/products";
 import type { Product } from "@/types";
 import { create } from "zustand";
+import { getBadgeIcon } from "./ProductCard";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 interface CompareStore {
   selectedIds: string[];
@@ -95,6 +97,7 @@ export function CompareBar({ onOpen }: { onOpen: () => void }) {
 // Full-screen comparison modal
 export function CompareModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { selectedIds } = useCompareStore();
+  const { settings } = useSystemSettings();
   const selected = PRODUCTS.filter((p) => selectedIds.includes(p.id));
 
   useEffect(() => {
@@ -137,8 +140,9 @@ export function CompareModal({ open, onClose }: { open: boolean; onClose: () => 
           {selected.map((product) => (
             <div key={product.id} className="glass rounded-2xl p-5 border border-white/5 text-center relative overflow-hidden group">
               {product.badge && (
-                <span className="absolute top-3 left-3 px-2 py-0.5 bg-[#39FF14] text-[#0A0A0A] text-[9px] font-black rounded-full uppercase">
-                  {product.badge}
+                <span className="absolute top-3 left-3 flex items-center gap-1 px-2 py-0.5 bg-black/60 backdrop-blur-sm border border-[#39FF14]/30 text-[#39FF14] text-[9px] font-bold rounded-full uppercase tracking-wider shadow-[0_0_8px_rgba(57,255,20,0.15)]">
+                  {getBadgeIcon(product.badge)}
+                  <span>{product.badge}</span>
                 </span>
               )}
               <img
@@ -148,9 +152,11 @@ export function CompareModal({ open, onClose }: { open: boolean; onClose: () => 
               />
               <h3 className="font-orbitron font-bold text-white text-sm mb-1">{product.name}</h3>
               <p className="text-[10px] text-[#39FF14] uppercase tracking-wide mb-3">{product.tagline}</p>
-              <p className="font-orbitron font-black text-2xl text-[#39FF14] mb-4">
-                ₱{product.price.toLocaleString()}
-              </p>
+              {!settings.hide_prices && (
+                <p className="font-orbitron font-black text-2xl text-[#39FF14] mb-4">
+                  ₱{product.price.toLocaleString()}
+                </p>
+              )}
               <Link
                 to={`/products/${product.id}`}
                 className="btn-primary w-full text-xs flex items-center justify-center gap-1.5"
@@ -165,16 +171,18 @@ export function CompareModal({ open, onClose }: { open: boolean; onClose: () => 
         {/* Spec Rows */}
         <div className="rounded-2xl border border-white/5 overflow-hidden">
           {/* Price row - always first */}
-          <div className="grid items-center border-b border-white/5 bg-[#39FF14]/3" style={{ gridTemplateColumns: `200px repeat(${selected.length}, 1fr)` }}>
-            <div className="px-5 py-4">
-              <span className="text-xs text-[#39FF14] font-bold uppercase tracking-wide">Starting Price</span>
-            </div>
-            {selected.map((p) => (
-              <div key={p.id} className="px-5 py-4 text-center border-l border-white/5">
-                <span className="font-orbitron font-black text-xl text-[#39FF14]">₱{p.price.toLocaleString()}</span>
+          {!settings.hide_prices && (
+            <div className="grid items-center border-b border-white/5 bg-[#39FF14]/3" style={{ gridTemplateColumns: `200px repeat(${selected.length}, 1fr)` }}>
+              <div className="px-5 py-4">
+                <span className="text-xs text-[#39FF14] font-bold uppercase tracking-wide">Starting Price</span>
               </div>
-            ))}
-          </div>
+              {selected.map((p) => (
+                <div key={p.id} className="px-5 py-4 text-center border-l border-white/5">
+                  <span className="font-orbitron font-black text-xl text-[#39FF14]">₱{p.price.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {SPEC_ROWS.map((row, i) => {
             const diff = isDifferent(row.key);

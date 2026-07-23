@@ -170,11 +170,11 @@ export default function AdminAppointments() {
           <p className="text-gray-500 text-sm mt-1">{appointments.length} total · {stats.pending} pending confirmation</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex gap-1 glass rounded-xl border border-white/10 p-1">
+          <div className="flex gap-1 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 p-1">
             <button onClick={() => setViewMode("list")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === "list" ? "bg-[#39FF14]/20 text-[#39FF14]" : "text-gray-500"}`}><FileText className="w-3.5 h-3.5" />List</button>
             <button onClick={() => setViewMode("calendar")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === "calendar" ? "bg-[#39FF14]/20 text-[#39FF14]" : "text-gray-500"}`}><Calendar className="w-3.5 h-3.5" />Calendar</button>
           </div>
-          <button onClick={fetchAppointments} disabled={loading} className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all">
+          <button onClick={fetchAppointments} disabled={loading} className="flex items-center gap-2 px-4 py-2.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />Refresh
           </button>
         </div>
@@ -189,7 +189,7 @@ export default function AdminAppointments() {
           { label: "In Progress", value: stats.inProgress, color: "text-orange-400" },
           { label: "Completed", value: stats.completed, color: "text-[#39FF14]" },
         ].map(s => (
-          <div key={s.label} className="glass rounded-xl p-4 border border-white/5 text-center">
+          <div key={s.label} className="bg-white/5 backdrop-blur-md rounded-xl p-4 border border-white/5 text-center">
             <p className={`font-orbitron font-bold text-2xl ${s.color}`}>{s.value}</p>
             <p className="text-xs text-gray-500 mt-1">{s.label}</p>
           </div>
@@ -200,13 +200,13 @@ export default function AdminAppointments() {
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 min-w-48">
           <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, service type..." className="w-full border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#39FF14]/30 transition-all" style={{ background: "#111" }} />
+          <input id="admin-appointments-search" name="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, email, service type..." className="w-full border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#39FF14]/30 transition-all" style={{ background: "#111" }} />
         </div>
         <CustomSelect value={filterStatus} onChange={setFilterStatus} options={STATUS_FILTER_OPTIONS} size="sm" className="w-44" />
         <CustomSelect value={filterCenter} onChange={setFilterCenter} options={CENTER_OPTIONS} size="sm" className="w-48" />
-        <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#39FF14]/30 transition-all" style={{ background: "#111" }} />
+        <input type="date" id="admin-appointments-date" name="date" value={filterDate} onChange={e => setFilterDate(e.target.value)} className="border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#39FF14]/30 transition-all" style={{ background: "#111" }} />
         {(filterDate || filterStatus !== "all" || filterCenter !== "all" || search) && (
-          <button onClick={() => { setFilterDate(""); setFilterStatus("all"); setFilterCenter("all"); setSearch(""); }} className="px-4 py-2.5 glass rounded-xl border border-white/10 text-xs text-gray-400 hover:text-white transition-all flex items-center gap-2">
+          <button onClick={() => { setFilterDate(""); setFilterStatus("all"); setFilterCenter("all"); setSearch(""); }} className="px-4 py-2.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-xs text-gray-400 hover:text-white transition-all flex items-center gap-2">
             <X className="w-3.5 h-3.5" />Clear
           </button>
         )}
@@ -214,7 +214,7 @@ export default function AdminAppointments() {
 
       {viewMode === "calendar" ? (
         /* ── Calendar View ── */
-        <div className="glass rounded-2xl border border-white/8 overflow-hidden">
+        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/8 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-white/8">
             <button onClick={() => setCalendarDate(new Date(year, month - 1, 1))} className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-all">
               <ChevronLeft className="w-5 h-5" />
@@ -268,7 +268,7 @@ export default function AdminAppointments() {
               const cfg = STATUS_CONFIG[apt.status] || STATUS_CONFIG.pending;
               return (
                 <div key={apt.id} onClick={() => openDetail(apt)}
-                  className={`glass rounded-xl border p-5 cursor-pointer transition-all ${selected?.id === apt.id ? "border-[#39FF14]/30 bg-[#39FF14]/3" : "border-white/5 hover:border-white/10"}`}>
+                  className={`bg-white/5 backdrop-blur-md rounded-xl border p-5 cursor-pointer transition-all ${selected?.id === apt.id ? "border-[#39FF14]/30 bg-[#39FF14]/3" : "border-white/5 hover:border-white/10"}`}>
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex flex-col items-center justify-center shrink-0">
                       <p className="font-orbitron font-bold text-lg text-white leading-none">{new Date(apt.preferred_date + "T00:00:00").getDate()}</p>
@@ -298,7 +298,7 @@ export default function AdminAppointments() {
 
           {/* Detail Panel */}
           {selected && (
-            <div className="glass rounded-xl border border-white/8 overflow-hidden h-fit sticky top-24">
+            <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/8 overflow-hidden h-fit sticky top-24">
               <div className="h-[2px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent" />
               <div className="px-5 py-4 border-b border-white/8 flex items-center justify-between">
                 <p className="font-semibold text-white text-sm">Appointment Detail</p>
@@ -338,39 +338,39 @@ export default function AdminAppointments() {
 
                 {/* Status Update */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Status</label>
+                  <label htmlFor="admin-appointments-status" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Status</label>
                   <CustomSelect value={editForm.status} onChange={v => setEditForm(f => ({ ...f, status: v }))} options={STATUS_OPTIONS} size="sm" />
                 </div>
 
                 {/* Technician */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Assigned Technician</label>
+                  <label htmlFor="admin-appointments-technician" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Assigned Technician</label>
                   <CustomSelect value={editForm.technician || ""} onChange={v => setEditForm(f => ({ ...f, technician: v }))}
                     options={[{ value: "", label: "Unassigned" }, ...TECHNICIANS.map(t => ({ value: t, label: t }))]} size="sm" />
                 </div>
 
                 {/* Estimated Cost */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Estimated Cost (PHP)</label>
+                  <label htmlFor="admin-appointments-estimated-cost" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Estimated Cost (PHP)</label>
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm">₱</span>
-                    <input type="number" value={editForm.estimated_cost} onChange={e => setEditForm(f => ({ ...f, estimated_cost: e.target.value }))} placeholder="0" className={inp + " pl-8"} {...INP_STYLE} />
+                    <input type="number" id="admin-appointments-estimated-cost" name="estimated_cost" value={editForm.estimated_cost} onChange={e => setEditForm(f => ({ ...f, estimated_cost: e.target.value }))} placeholder="0" className={inp + " pl-8"} {...INP_STYLE} />
                   </div>
                 </div>
 
                 {/* Parts Used */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="text-xs text-gray-400 uppercase tracking-widest">Parts Used</label>
+                    <label htmlFor="admin-appointments-parts" className="text-xs text-gray-400 uppercase tracking-widest">Parts Used</label>
                     <button onClick={addPart} className="text-xs text-[#39FF14] hover:underline flex items-center gap-1"><Plus className="w-3 h-3" />Add Part</button>
                   </div>
                   {editForm.parts_used.length === 0 ? (
                     <p className="text-xs text-gray-600 text-center py-3">No parts recorded yet</p>
                   ) : editForm.parts_used.map((part, i) => (
                     <div key={i} className="grid grid-cols-7 gap-2 mb-2 items-center">
-                      <input value={part.name} onChange={e => updatePart(i, "name", e.target.value)} placeholder="Part name" className={inp + " py-2 col-span-3 text-xs"} {...INP_STYLE} />
-                      <input type="number" value={part.qty} onChange={e => updatePart(i, "qty", parseInt(e.target.value) || 1)} className={inp + " py-2 col-span-1 text-xs text-center"} {...INP_STYLE} />
-                      <input type="number" value={part.cost} onChange={e => updatePart(i, "cost", parseFloat(e.target.value) || 0)} placeholder="₱" className={inp + " py-2 col-span-2 text-xs"} {...INP_STYLE} />
+                      <input id={`admin-appointments-part-name-${i}`} name={`part_name_${i}`} value={part.name} onChange={e => updatePart(i, "name", e.target.value)} placeholder="Part name" className={inp + " py-2 col-span-3 text-xs"} {...INP_STYLE} />
+                      <input type="number" id={`admin-appointments-part-qty-${i}`} name={`part_qty_${i}`} value={part.qty} onChange={e => updatePart(i, "qty", parseInt(e.target.value) || 1)} className={inp + " py-2 col-span-1 text-xs text-center"} {...INP_STYLE} />
+                      <input type="number" id={`admin-appointments-part-cost-${i}`} name={`part_cost_${i}`} value={part.cost} onChange={e => updatePart(i, "cost", parseFloat(e.target.value) || 0)} placeholder="₱" className={inp + " py-2 col-span-2 text-xs"} {...INP_STYLE} />
                       <button onClick={() => removePart(i)} className="text-red-400 hover:text-red-300 transition-colors"><X className="w-3.5 h-3.5" /></button>
                     </div>
                   ))}
@@ -383,8 +383,8 @@ export default function AdminAppointments() {
 
                 {/* Notes */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Internal Notes</label>
-                  <textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Service notes, findings, recommendations..." className={inp + " resize-none"} {...INP_STYLE} />
+                  <label htmlFor="admin-appointments-notes" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest">Internal Notes</label>
+                  <textarea id="admin-appointments-notes" name="notes" value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Service notes, findings, recommendations..." className={inp + " resize-none"} {...INP_STYLE} />
                 </div>
 
                 {/* Actions */}
@@ -394,7 +394,7 @@ export default function AdminAppointments() {
                     {saving ? "Saving..." : "Save Changes"}
                   </button>
                   {!selected.confirmation_sent && (
-                    <button onClick={() => sendConfirmation(selected)} className="w-full flex items-center justify-center gap-2 py-2.5 glass rounded-xl border border-[#39FF14]/30 text-[#39FF14] text-sm font-semibold hover:bg-[#39FF14]/10 transition-all">
+                    <button onClick={() => sendConfirmation(selected)} className="w-full flex items-center justify-center gap-2 py-2.5 bg-white/5 backdrop-blur-md rounded-xl border border-[#39FF14]/30 text-[#39FF14] text-sm font-semibold hover:bg-[#39FF14]/10 transition-all">
                       <Mail className="w-4 h-4" />Send Confirmation Email
                     </button>
                   )}
@@ -414,3 +414,4 @@ export default function AdminAppointments() {
     </div>
   );
 }
+

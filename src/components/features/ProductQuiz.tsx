@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Check, Sparkles, HelpCircle, ArrowRight, ArrowLeft, RefreshCw, Zap, Shield, HelpCircle as InfoIcon } from "lucide-react";
 import { PRODUCTS } from "@/constants/products";
 import type { Product } from "@/types";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 interface Question {
   id: number;
@@ -56,6 +57,7 @@ const QUIZ_QUESTIONS: Question[] = [
 ];
 
 export default function ProductQuiz() {
+  const { settings } = useSystemSettings();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(false);
@@ -103,7 +105,7 @@ export default function ProductQuiz() {
       explanation = "The versatile TRIP Fold X matches your requirements best. It combines active front suspension with dual fat tires to navigate bumpy urban roads while maintaining portable convenience.";
     }
 
-    const matchedProduct = PRODUCTS.find((p) => p.id === recommendedId) || PRODUCTS[0];
+    const matchedProduct = PRODUCTS.find((p) => p.id === recommendedId) || null;
     return { product: matchedProduct, explanation };
   };
 
@@ -249,9 +251,11 @@ export default function ProductQuiz() {
                           <span className="text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 font-bold uppercase tracking-wider">
                             {recommendation.category}
                           </span>
-                          <span className="font-orbitron text-sm font-bold text-[#39FF14]">
-                            ₱{recommendation.price.toLocaleString()}
-                          </span>
+                          {!settings.hide_prices && (
+                            <span className="font-orbitron text-sm font-bold text-[#39FF14]">
+                              ₱{recommendation.price.toLocaleString()}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
                           {recommendation.description}

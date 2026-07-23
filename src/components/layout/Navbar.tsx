@@ -1,21 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Menu, X, Zap, User, LogOut, LayoutDashboard, ChevronDown, Wrench } from "lucide-react";
+import { Menu, X, Zap, User, LogOut, LayoutDashboard, Wrench } from "lucide-react";
 import QuoteModal from "@/components/features/QuoteModal";
 import CustomerAuthModal from "@/components/features/CustomerAuthModal";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { apiClient } from "@/lib/api-client";
 import { toast } from "sonner";
-
+import { useSystemSettings } from "@/hooks/useSystemSettings";
+import logoMain from "@/assets/logo-main.png";
 
 const NAV_LINKS = [
-  { label: "Products", href: "/products" },
-  { label: "Compare", href: "/compare" },
-  { label: "Industries", href: "/industries" },
-  { label: "Financing", href: "/financing" },
-  { label: "About", href: "/about" },
-  { label: "Service", href: "/service" },
-  { label: "Blog", href: "/blog" },
+  { label: "Home", href: "/", settingKey: "nav_home_enabled" },
+  { label: "Products", href: "/products", settingKey: "nav_products_enabled" },
+  { label: "About", href: "/about", settingKey: "nav_about_enabled" },
+  { label: "Blog", href: "/blog", settingKey: "nav_blog_enabled" },
 ];
 
 export default function Navbar() {
@@ -28,16 +26,19 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { customer, logout } = useCustomerAuth();
+  const { settings } = useSystemSettings();
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
+    const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  useEffect(() => { setMobileOpen(false); setAccountOpen(false); }, [location.pathname]);
+  useEffect(() => {
+    setMobileOpen(false);
+    setAccountOpen(false);
+  }, [location.pathname]);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -56,48 +57,85 @@ export default function Navbar() {
     toast.success("Signed out successfully");
   };
 
+  const title = settings?.site_title || "TRIP Mobility";
+  const words = title.split(" ");
+  const firstWord = words[0] || "TRIP";
+  const remainingWords = words.slice(1).join(" ") || "MOBILITY";
+
+  const visibleNavLinks = NAV_LINKS.filter(link => {
+    if (!settings) return true;
+    return settings[link.settingKey] !== false && settings[link.settingKey] !== "false";
+  });
+
   return (
     <>
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? "bg-[#0A0A0A]/10 backdrop-blur-xl shadow-2xl" : "bg-transparent"}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          scrolled
+            ? "bg-white/95 backdrop-blur-md border-b border-black/5 py-1.5 sm:py-2 shadow-sm"
+            : "bg-white/80 backdrop-blur-sm py-1.5 sm:py-2"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-6">
+          <div className={`flex items-center justify-between transition-all duration-500 ${
+            scrolled ? "h-9 sm:h-11" : "h-10 sm:h-12"
+          }`}>
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="relative w-10 h-10 flex items-center justify-center">
-                <div className="absolute inset-0 bg-[#39FF14]/20 rounded-lg animate-glow-pulse" />
-                <Zap className="w-6 h-6 text-[#39FF14] relative z-10" fill="#39FF14" />
-              </div>
-              <div>
-                <span className="font-orbitron font-black text-xl text-white tracking-tight group-hover:text-[#39FF14] transition-colors">TRIP</span>
-                <span className="block text-[9px] text-[#39FF14] tracking-[0.2em] font-medium -mt-1">MOBILITY</span>
-              </div>
+              {settings?.brand_logo_main || logoMain ? (
+                <img
+                  src={settings?.brand_logo_main || logoMain}
+                  alt={title}
+                  className={`w-auto object-contain transition-all duration-500 group-hover:scale-110 ${
+                    scrolled ? "h-9 sm:h-11" : "h-10 sm:h-12"
+                  }`}
+                />
+              ) : (
+                <>
+                  <div className="relative w-8 h-8 flex items-center justify-center border border-black/20 rounded-[2px] transition-colors group-hover:border-black">
+                    <Zap className="w-4 h-4 text-black" />
+                  </div>
+                  <div>
+                    <span className="font-sans font-bold text-lg text-black tracking-tight uppercase">
+                      {firstWord}
+                    </span>
+                    <span className="block text-[8px] text-[#707070] tracking-[0.25em] font-medium -mt-1 uppercase">
+                      {remainingWords}
+                    </span>
+                  </div>
+                </>
+              )}
             </Link>
 
             {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center gap-8">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className={`text-sm font-medium tracking-wide transition-all duration-300 hover:text-[#39FF14] relative group ${location.pathname === link.href ? "text-[#39FF14]" : "text-gray-400"}`}
-                >
-                  {link.label}
-                  <span className={`absolute -bottom-1 left-0 h-px bg-[#39FF14] transition-all duration-300 ${location.pathname === link.href ? "w-full" : "w-0 group-hover:w-full"}`} />
-                </Link>
-              ))}
+            <div className="hidden lg:flex items-center gap-10">
+              {visibleNavLinks.map((link) => {
+                const isActive = location.pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className={`text-[13px] uppercase tracking-wider transition-colors duration-300 py-1.5 relative group ${
+                      isActive ? "text-black font-semibold" : "text-[#707070] hover:text-black font-medium"
+                    }`}
+                  >
+                    {link.label}
+                    <span
+                      className={`absolute bottom-0 left-0 h-[1.5px] bg-black transition-all duration-300 ${
+                        isActive ? "w-full" : "w-0 group-hover:w-full"
+                      }`}
+                    />
+                  </Link>
+                );
+              })}
             </div>
 
             {/* CTA + Account */}
-            <div className="hidden lg:flex items-center gap-3">
-              <Link
-                to="/service#appointment"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-[#39FF14]/20 text-xs text-[#39FF14] hover:bg-[#39FF14]/10 hover:border-[#39FF14]/40 transition-all font-semibold font-orbitron"
-              >
-                <Wrench className="w-3.5 h-3.5" />Book Service
-              </Link>
+            <div className="hidden lg:flex items-center gap-5">
+
               <button
                 onClick={() => setQuoteOpen(true)}
-                className="bg-[#39FF14] text-[#0A0A0A] font-bold px-4 py-2 rounded-lg text-xs uppercase tracking-widest transition-all duration-300 hover:bg-white hover:shadow-[0_0_20px_rgba(57,255,20,0.6)] hover:scale-105 active:scale-95 whitespace-nowrap h-9 flex items-center justify-center font-orbitron"
+                className="bg-black text-white font-medium px-6 py-2.5 rounded-[2px] text-xs uppercase tracking-widest transition-all duration-300 hover:bg-[#2C2C2C] active:scale-95 h-10 flex items-center justify-center shadow-premium"
               >
                 Get a Quote
               </button>
@@ -106,36 +144,41 @@ export default function Navbar() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setAccountOpen(!accountOpen)}
-                    className="w-9 h-9 rounded-full bg-gradient-to-br from-[#39FF14]/20 to-[#00FFFF]/10 border border-[#39FF14]/30 hover:border-[#39FF14]/60 transition-all flex items-center justify-center font-bold text-[#39FF14] text-sm hover:scale-105"
+                    className="w-10 h-10 rounded-[2px] bg-white border border-black/10 hover:border-black/30 transition-all flex items-center justify-center font-semibold text-black shadow-sm"
                   >
                     {customer.username[0].toUpperCase()}
                   </button>
 
                   {accountOpen && (
-                    <div className="absolute right-0 mt-2 w-56 glass rounded-xl border border-white/10 shadow-2xl overflow-hidden z-50 animate-fade-up">
-                      {/* User info header */}
-                      <div className="px-4 py-3.5 border-b border-white/5 bg-gradient-to-r from-[#39FF14]/5 to-transparent">
+                    <div className="absolute right-0 mt-3 w-64 bg-white border border-black/10 shadow-premium rounded-[2px] overflow-hidden z-50 animate-fade-up">
+                      <div className="px-5 py-4 border-b border-black/5 bg-[#FAFAFA]">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#39FF14]/20 to-[#00FFFF]/10 border border-[#39FF14]/30 flex items-center justify-center font-bold text-[#39FF14] text-sm">
+                          <div className="w-10 h-10 rounded-[2px] bg-white border border-black/10 flex items-center justify-center font-semibold text-black">
                             {customer.username[0].toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-semibold text-white truncate">{customer.username}</p>
-                            <p className="text-xs text-gray-500 truncate">{customer.email}</p>
+                            <p className="text-sm font-semibold text-black truncate">
+                              {customer.username}
+                            </p>
+                            <p className="text-xs text-[#707070] truncate mt-0.5">
+                              {customer.email}
+                            </p>
                           </div>
                         </div>
                       </div>
                       <Link
                         to="/my-quotes"
-                        className="flex items-center gap-2.5 px-4 py-3 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all"
+                        className="flex items-center gap-3 px-5 py-3.5 text-xs font-medium uppercase tracking-wider text-[#707070] hover:text-black hover:bg-[#FAFAFA] transition-all"
                       >
-                        <LayoutDashboard className="w-4 h-4 text-[#39FF14]" />
+                        <LayoutDashboard className="w-4 h-4" />
                         My Quotations
-                        <span className="ml-auto text-[10px] px-1.5 py-0.5 bg-[#39FF14]/15 text-[#39FF14] rounded font-bold">Dashboard</span>
+                        <span className="ml-auto text-[9px] px-2 py-0.5 bg-black/5 text-black rounded-[2px] font-bold">
+                          Portal
+                        </span>
                       </Link>
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-gray-400 hover:text-red-400 hover:bg-red-500/5 transition-all border-t border-white/5"
+                        className="w-full flex items-center gap-3 px-5 py-3.5 text-xs font-medium uppercase tracking-wider text-[#707070] hover:text-red-600 hover:bg-red-50 transition-all border-t border-black/5 text-left"
                       >
                         <LogOut className="w-4 h-4" />
                         Sign Out
@@ -146,10 +189,10 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => setAuthOpen(true)}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-all border border-white/10 hover:border-white/25 px-3 py-2 rounded-lg hover:bg-white/5 h-9"
+                  className="w-10 h-10 flex items-center justify-center rounded-[2px] border border-black/10 text-black hover:border-black/30 hover:bg-[#FAFAFA] transition-all shadow-sm"
+                  aria-label="Sign In"
                 >
-                  <User className="w-3.5 h-3.5" />
-                  Sign In
+                  <User className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -157,7 +200,7 @@ export default function Navbar() {
             {/* Mobile toggle */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden w-11 h-11 flex items-center justify-center rounded-lg border border-white/10 text-white hover:border-[#39FF14]/50 hover:text-[#39FF14] transition-all"
+              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-[2px] border border-black/10 text-black hover:border-black/30 hover:bg-[#FAFAFA] transition-all"
               aria-label="Toggle menu"
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -167,39 +210,40 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {mobileOpen && (
-          <div className="lg:hidden bg-[#0A0A0A]/98 backdrop-blur-xl border-t border-white/5 py-6 px-6">
-            <div className="flex flex-col gap-4">
-              {NAV_LINKS.map((link) => (
+          <div className="lg:hidden bg-white border-t border-black/5 py-6 px-6 shadow-premium absolute w-full animate-fade-up">
+            <div className="flex flex-col gap-2">
+              {visibleNavLinks.map((link) => (
                 <Link
                   key={link.href}
                   to={link.href}
-                  className={`text-sm font-medium py-2 border-b border-white/5 transition-colors ${location.pathname === link.href ? "text-[#39FF14]" : "text-gray-300 hover:text-[#39FF14]"}`}
+                  className={`text-sm font-semibold uppercase tracking-widest py-3 border-b border-black/5 transition-colors ${
+                    location.pathname === link.href ? "text-black" : "text-[#707070] hover:text-black"
+                  }`}
                 >
                   {link.label}
                 </Link>
               ))}
               {customer ? (
                 <>
-                  {/* Mobile account info */}
-                  <div className="flex items-center gap-3 py-2 border-b border-white/5">
-                    <div className="w-8 h-8 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center font-bold text-[#39FF14] text-sm">
+                  <div className="flex items-center gap-3 py-4 border-b border-black/5 bg-[#FAFAFA] px-4 -mx-4 mt-4">
+                    <div className="w-10 h-10 rounded-[2px] bg-white border border-black/10 flex items-center justify-center font-semibold text-black">
                       {customer.username[0].toUpperCase()}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">{customer.username}</p>
-                      <p className="text-xs text-gray-500">{customer.email}</p>
+                      <p className="text-sm font-semibold text-black">{customer.username}</p>
+                      <p className="text-xs text-[#707070] mt-0.5">{customer.email}</p>
                     </div>
                   </div>
                   <Link
                     to="/my-quotes"
-                    className="flex items-center gap-2 text-sm text-gray-300 py-2 border-b border-white/5 hover:text-[#39FF14] transition-colors"
+                    className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-[#707070] py-4 border-b border-black/5 hover:text-black transition-colors"
                   >
-                    <LayoutDashboard className="w-4 h-4 text-[#39FF14]" />
+                    <LayoutDashboard className="w-4 h-4" />
                     My Quotations
                   </Link>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 text-sm text-red-400 py-2"
+                    className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-[#707070] py-4 hover:text-red-600 transition-colors text-left border-b border-black/5"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign Out
@@ -207,16 +251,23 @@ export default function Navbar() {
                 </>
               ) : (
                 <button
-                  onClick={() => { setAuthOpen(true); setMobileOpen(false); }}
-                  className="flex items-center gap-2 text-sm text-gray-400 py-2 border-b border-white/5 hover:text-[#39FF14] transition-colors"
+                  onClick={() => {
+                    setAuthOpen(true);
+                    setMobileOpen(false);
+                  }}
+                  className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-black py-4 border-b border-black/5 hover:text-[#707070] transition-colors text-left mt-4"
                 >
                   <User className="w-4 h-4" />
                   Sign In / Create Account
                 </button>
               )}
+
               <button
-                onClick={() => { setQuoteOpen(true); setMobileOpen(false); }}
-                className="btn-primary mt-2 w-full text-center"
+                onClick={() => {
+                  setQuoteOpen(true);
+                  setMobileOpen(false);
+                }}
+                className="btn-primary mt-6 w-full text-center py-4"
               >
                 Get a Personalized Quote
               </button>
@@ -226,7 +277,7 @@ export default function Navbar() {
       </nav>
 
       <QuoteModal open={quoteOpen} onClose={() => setQuoteOpen(false)} />
-      <CustomerAuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <CustomerAuthModal open={authOpen} onClose={() => setAuthOpen(false)} onSuccess={() => setAuthOpen(false)} />
     </>
   );
 }

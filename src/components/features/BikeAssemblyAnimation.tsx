@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Play } from "lucide-react";
+import heroBike from "@/assets/hero-bike.jpg";
+import adminBg from "@/assets/admin-bg.jpg";
+import { syncLiveProducts } from "@/constants/products";
 
 interface AnimatedCounterProps {
   target: number;
@@ -26,36 +30,95 @@ function AnimatedCounter({ target, suffix = "", duration = 2000, active }: Anima
   return <span>{count}{suffix}</span>;
 }
 
-const BIKE_PARTS = [
-  { id: "frame", label: "Frame", color: "#39FF14", delay: 0 },
-  { id: "wheels", label: "Wheels", color: "#00FFFF", delay: 400 },
-  { id: "battery", label: "Battery", color: "#39FF14", delay: 800 },
-  { id: "motor", label: "Motor", color: "#A8FF3E", delay: 1200 },
-  { id: "display", label: "Smart Display", color: "#00FFFF", delay: 1600 },
-];
-
-const METRICS = [
-  { label: "Max Range", value: 120, suffix: "km", color: "#39FF14", barWidth: 100 },
-  { label: "Top Speed", value: 50, suffix: "km/h", color: "#00FFFF", barWidth: 83 },
-  { label: "Motor Power", value: 750, suffix: "W", color: "#A8FF3E", barWidth: 75 },
-  { label: "Payload", value: 180, suffix: "kg", color: "#39FF14", barWidth: 72 },
-];
+const MODELS_DATA = {
+  cargo: {
+    name: "Cargo Pro",
+    fullName: "TRIP Cargo Pro",
+    tagline: "Engineered for the Last Mile",
+    metrics: [
+      { label: "Max Range", value: 120, suffix: "km", color: "#FFFFFF", barWidth: 100 },
+      { label: "Top Speed", value: 45, suffix: "km/h", color: "#FFFFFF", barWidth: 75 },
+      { label: "Motor Power", value: 500, suffix: "W", color: "#FFFFFF", barWidth: 66 },
+      { label: "Payload", value: 180, suffix: "kg", color: "#FFFFFF", barWidth: 100 },
+    ],
+    stats: [
+      { label: "CO₂ Saved/Year", value: "1.2T" },
+      { label: "Fuel Cost Saved", value: "₱0/day" },
+      { label: "Charge Time", value: "5–6 hrs" },
+      { label: "Service Life", value: "8+ Years" },
+    ],
+    details: [
+      { label: "Frame Material", value: "High-tensile Steel Alloy" },
+      { label: "Brake System", value: "Hydraulic Disc Brakes" },
+      { label: "Tire Specifications", value: '26" × 4.0" Puncture Fat Tires' },
+    ]
+  },
+  fold: {
+    name: "Fold X",
+    fullName: "TRIP Fold X",
+    tagline: "Compact Power, Limitless Freedom",
+    metrics: [
+      { label: "Max Range", value: 50, suffix: "km", color: "#FFFFFF", barWidth: 41 },
+      { label: "Top Speed", value: 40, suffix: "km/h", color: "#FFFFFF", barWidth: 66 },
+      { label: "Motor Power", value: 500, suffix: "W", color: "#FFFFFF", barWidth: 66 },
+      { label: "Payload", value: 120, suffix: "kg", color: "#FFFFFF", barWidth: 66 },
+    ],
+    stats: [
+      { label: "CO₂ Saved/Year", value: "0.8T" },
+      { label: "Fuel Cost Saved", value: "₱0/day" },
+      { label: "Charge Time", value: "4–5 hrs" },
+      { label: "Service Life", value: "6+ Years" },
+    ],
+    details: [
+      { label: "Frame Material", value: "Aerospace Aluminum Alloy" },
+      { label: "Brake System", value: "Mechanical Disc Brakes" },
+      { label: "Tire Specifications", value: '20" × 4.0" Foldable Fat Tires' },
+    ]
+  },
+  ranger: {
+    name: "Ranger 750",
+    fullName: "TRIP Ranger 750",
+    tagline: "Conquer Every Terrain",
+    metrics: [
+      { label: "Max Range", value: 60, suffix: "km", color: "#FFFFFF", barWidth: 50 },
+      { label: "Top Speed", value: 50, suffix: "km/h", color: "#FFFFFF", barWidth: 83 },
+      { label: "Motor Power", value: 750, suffix: "W", color: "#FFFFFF", barWidth: 100 },
+      { label: "Payload", value: 150, suffix: "kg", color: "#FFFFFF", barWidth: 83 },
+    ],
+    stats: [
+      { label: "CO₂ Saved/Year", value: "1.0T" },
+      { label: "Fuel Cost Saved", value: "₱0/day" },
+      { label: "Charge Time", value: "5–6 hrs" },
+      { label: "Service Life", value: "8+ Years" },
+    ],
+    details: [
+      { label: "Frame Material", value: "Steel Alloy MTB Frame" },
+      { label: "Brake System", value: "Hydraulic Disc Brakes" },
+      { label: "Tire Specifications", value: '26" × 4.0" All-Terrain Tires' },
+    ]
+  }
+};
 
 export default function BikeAssemblyAnimation() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
-  const [visibleParts, setVisibleParts] = useState<Set<string>>(new Set());
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [liveProducts, setLiveProducts] = useState<any[]>([]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+
+  useEffect(() => {
+    syncLiveProducts().then(list => {
+      if (list && list.length > 0) {
+        setLiveProducts(list.slice(0, 3));
+      }
+    });
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && !active) {
           setActive(true);
-          BIKE_PARTS.forEach((part) => {
-            setTimeout(() => {
-              setVisibleParts((prev) => new Set([...prev, part.id]));
-            }, part.delay);
-          });
         }
       },
       { threshold: 0.3 }
@@ -64,251 +127,238 @@ export default function BikeAssemblyAnimation() {
     return () => observer.disconnect();
   }, [active]);
 
+  // Fallback static data if live products are not loaded yet
+  const activeProduct = liveProducts[selectedIdx];
+  
+  const getNumericValue = (valStr: string) => {
+    if (!valStr) return 0;
+    const num = parseInt(valStr.replace(/[^0-9]/g, ""));
+    return isNaN(num) ? 0 : num;
+  };
+
+  const getMetricData = () => {
+    if (!activeProduct) {
+      return {
+        name: "Cargo Pro",
+        metrics: [
+          { label: "Max Range", value: 120, suffix: "km", color: "#FFFFFF", barWidth: 100 },
+          { label: "Top Speed", value: 45, suffix: "km/h", color: "#FFFFFF", barWidth: 75 },
+          { label: "Motor Power", value: 500, suffix: "W", color: "#FFFFFF", barWidth: 66 },
+          { label: "Payload", value: 180, suffix: "kg", color: "#FFFFFF", barWidth: 100 },
+        ],
+        stats: [
+          { label: "CO₂ Saved/Year", value: "1.2T" },
+          { label: "Fuel Cost Saved", value: "₱0/day" },
+          { label: "Charge Time", value: "5–6 hrs" },
+          { label: "Service Life", value: "8+ Years" },
+        ],
+        details: [
+          { label: "Frame Material", value: "High-tensile Steel Alloy" },
+          { label: "Brake System", value: "Hydraulic Disc Brakes" },
+          { label: "Tire Specifications", value: '26" × 4.0" Puncture Fat Tires' },
+        ],
+        image: heroBike,
+        videoUrl: null
+      };
+    }
+
+    const s = activeProduct.specs || {};
+    const rangeVal = getNumericValue(s.range || "120");
+    const speedVal = getNumericValue(s.topSpeed || "45");
+    const motorVal = getNumericValue(s.motor || "500");
+    const payloadVal = getNumericValue(s.payload || "180");
+
+    // Dynamic bar calculation percentages relative to standard maximum parameters
+    const rangePercent = Math.min(Math.round((rangeVal / 150) * 100), 100);
+    const speedPercent = Math.min(Math.round((speedVal / 60) * 100), 100);
+    const motorPercent = Math.min(Math.round((motorVal / 1000) * 100), 100);
+    const payloadPercent = Math.min(Math.round((payloadVal / 220) * 100), 100);
+
+    return {
+      name: activeProduct.name,
+      metrics: [
+        { label: "Max Range", value: rangeVal, suffix: "km", color: "#FFFFFF", barWidth: rangePercent },
+        { label: "Top Speed", value: speedVal, suffix: "km/h", color: "#FFFFFF", barWidth: speedPercent },
+        { label: "Motor Power", value: motorVal, suffix: "W", color: "#FFFFFF", barWidth: motorPercent },
+        { label: "Payload", value: payloadVal, suffix: "kg", color: "#FFFFFF", barWidth: payloadPercent },
+      ],
+      stats: [
+        { label: "CO₂ Saved/Year", value: rangeVal > 80 ? "1.2T" : rangeVal > 55 ? "1.0T" : "0.8T" },
+        { label: "Fuel Cost Saved", value: "₱0/day" },
+        { label: "Charge Time", value: s.chargeTime || s.chargingTime || "5–6 hrs" },
+        { label: "Service Life", value: "8+ Years" },
+      ],
+      details: [
+        { label: "Frame Material", value: s.frame || "High-tensile Alloy" },
+        { label: "Brake System", value: s.brakes || "Hydraulic Disc Brakes" },
+        { label: "Tire Specifications", value: s.tires || '26" × 4.0" Fat Tires' },
+      ],
+      image: activeProduct.image || heroBike,
+      videoUrl: activeProduct.videoUrl || null
+    };
+  };
+
+  const currentData = getMetricData();
+
   return (
     <section
       ref={sectionRef}
-      className="py-24 relative overflow-hidden bg-[#0D0D0D]"
+      className="py-24 relative overflow-hidden bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${adminBg})` }}
     >
-      {/* Background grid */}
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage: "linear-gradient(rgba(57,255,20,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(57,255,20,0.5) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
+      {/* Overlay to ensure perfect text readability */}
+      <div className="absolute inset-0 bg-black/80"></div>
 
-      <div className="relative max-w-7xl mx-auto px-6">
-        <div className="text-center mb-16">
+      <div className="relative z-10 max-w-7xl mx-auto px-6">
+    <div className="text-center mb-16">
           <p className="section-label mb-3">Engineering Excellence</p>
-          <h2 className="font-orbitron font-bold text-4xl sm:text-5xl text-white">
-            Assembled for <span className="gradient-text">Performance</span>
+          <h2 className="font-bold text-4xl sm:text-5xl text-white">
+            Assembled for <span>Performance</span>
           </h2>
-          <p className="text-gray-400 mt-4 max-w-xl mx-auto">
+          <p className="text-gray-400 mt-4 max-w-2xl mx-auto">
             Every TRIP e-bike is precision-engineered with premium components that work together for an unmatched riding experience.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          {/* Left: Bike assembly visual */}
-          <div className="relative">
-            {/* SVG Bike Silhouette */}
-            <div className="relative w-full aspect-[4/3] flex items-center justify-center">
-              {/* Glow orb */}
-              <div
-                className="absolute w-64 h-64 rounded-full blur-[80px] transition-all duration-1000"
-                style={{
-                  background: active ? "radial-gradient(circle, rgba(57,255,20,0.15), transparent)" : "transparent",
-                }}
-              />
-
-              {/* SVG bike */}
-              <svg
-                viewBox="0 0 400 280"
-                className="w-full max-w-md relative z-10"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {/* Rear wheel */}
-                <g
-                  className="transition-all duration-700"
-                  style={{
-                    opacity: visibleParts.has("wheels") ? 1 : 0,
-                    transform: visibleParts.has("wheels") ? "translateY(0)" : "translateY(30px)",
-                  }}
-                >
-                  <circle cx="100" cy="195" r="60" stroke="#00FFFF" strokeWidth="8" opacity="0.8" />
-                  <circle cx="100" cy="195" r="45" stroke="#00FFFF" strokeWidth="2" opacity="0.3" />
-                  <circle cx="100" cy="195" r="8" fill="#00FFFF" opacity="0.9" />
-                  {[0, 60, 120, 180, 240, 300].map((angle) => (
-                    <line
-                      key={angle}
-                      x1="100" y1="195"
-                      x2={100 + 50 * Math.cos((angle * Math.PI) / 180)}
-                      y2={195 + 50 * Math.sin((angle * Math.PI) / 180)}
-                      stroke="#00FFFF"
-                      strokeWidth="1.5"
-                      opacity="0.4"
-                    />
-                  ))}
-                </g>
-
-                {/* Front wheel */}
-                <g
-                  className="transition-all duration-700"
-                  style={{
-                    opacity: visibleParts.has("wheels") ? 1 : 0,
-                    transform: visibleParts.has("wheels") ? "translateY(0)" : "translateY(30px)",
-                    transitionDelay: "200ms",
-                  }}
-                >
-                  <circle cx="300" cy="195" r="60" stroke="#00FFFF" strokeWidth="8" opacity="0.8" />
-                  <circle cx="300" cy="195" r="45" stroke="#00FFFF" strokeWidth="2" opacity="0.3" />
-                  <circle cx="300" cy="195" r="8" fill="#00FFFF" opacity="0.9" />
-                  {[0, 60, 120, 180, 240, 300].map((angle) => (
-                    <line
-                      key={angle}
-                      x1="300" y1="195"
-                      x2={300 + 50 * Math.cos((angle * Math.PI) / 180)}
-                      y2={195 + 50 * Math.sin((angle * Math.PI) / 180)}
-                      stroke="#00FFFF"
-                      strokeWidth="1.5"
-                      opacity="0.4"
-                    />
-                  ))}
-                </g>
-
-                {/* Frame */}
-                <g
-                  className="transition-all duration-800"
-                  style={{
-                    opacity: visibleParts.has("frame") ? 1 : 0,
-                    transform: visibleParts.has("frame") ? "scale(1)" : "scale(0.9)",
-                    transformOrigin: "200px 140px",
-                  }}
-                >
-                  {/* Main triangle frame */}
-                  <path d="M100 195 L200 80 L300 195" stroke="#39FF14" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
-                  {/* Seat tube */}
-                  <path d="M200 80 L180 195" stroke="#39FF14" strokeWidth="5" strokeLinecap="round" opacity="0.7" />
-                  {/* Top tube */}
-                  <path d="M200 80 L280 100" stroke="#39FF14" strokeWidth="4" strokeLinecap="round" opacity="0.8" />
-                  {/* Fork */}
-                  <path d="M280 100 L300 195" stroke="#39FF14" strokeWidth="5" strokeLinecap="round" opacity="0.8" />
-                  {/* Chain stay */}
-                  <path d="M100 195 L180 195" stroke="#39FF14" strokeWidth="3" opacity="0.5" />
-                  {/* Glow effect */}
-                  <path d="M100 195 L200 80 L300 195" stroke="#39FF14" strokeWidth="2" strokeLinecap="round" opacity="0.3" filter="blur(3px)" />
-                </g>
-
-                {/* Battery */}
-                <g
-                  className="transition-all duration-700"
-                  style={{
-                    opacity: visibleParts.has("battery") ? 1 : 0,
-                    transform: visibleParts.has("battery") ? "translateX(0)" : "translateX(-20px)",
-                  }}
-                >
-                  <rect x="145" y="140" width="50" height="22" rx="4" fill="rgba(57,255,20,0.15)" stroke="#39FF14" strokeWidth="2" />
-                  <rect x="148" y="143" width="12" height="16" rx="2" fill="#39FF14" opacity="0.8" />
-                  <rect x="163" y="143" width="12" height="16" rx="2" fill="#39FF14" opacity="0.6" />
-                  <rect x="178" y="143" width="10" height="16" rx="2" fill="#39FF14" opacity="0.4" />
-                  <rect x="193" y="147" width="4" height="8" rx="2" fill="#39FF14" opacity="0.7" />
-                  <text x="170" y="178" textAnchor="middle" fill="#39FF14" fontSize="8" fontWeight="bold" opacity="0.8">48V 11.6Ah</text>
-                </g>
-
-                {/* Motor */}
-                <g
-                  className="transition-all duration-700"
-                  style={{
-                    opacity: visibleParts.has("motor") ? 1 : 0,
-                    transform: visibleParts.has("motor") ? "scale(1)" : "scale(0)",
-                    transformOrigin: "100px 195px",
-                  }}
-                >
-                  <circle cx="100" cy="195" r="16" fill="rgba(168,255,62,0.2)" stroke="#A8FF3E" strokeWidth="2" />
-                  <circle cx="100" cy="195" r="6" fill="#A8FF3E" />
-                  <text x="100" y="222" textAnchor="middle" fill="#A8FF3E" fontSize="7" fontWeight="bold">750W</text>
-                </g>
-
-                {/* Display */}
-                <g
-                  className="transition-all duration-700"
-                  style={{
-                    opacity: visibleParts.has("display") ? 1 : 0,
-                    transform: visibleParts.has("display") ? "translateY(0)" : "translateY(-15px)",
-                  }}
-                >
-                  <rect x="252" y="70" width="36" height="24" rx="4" fill="rgba(0,255,255,0.1)" stroke="#00FFFF" strokeWidth="1.5" />
-                  <rect x="256" y="74" width="28" height="16" rx="2" fill="rgba(0,255,255,0.15)" />
-                  <text x="270" y="85" textAnchor="middle" fill="#00FFFF" fontSize="7" fontWeight="bold">LCD</text>
-                </g>
-
-                {/* Seat */}
-                <g style={{ opacity: visibleParts.has("frame") ? 1 : 0 }}>
-                  <path d="M185 75 Q200 65 215 68 L210 80 Q200 72 190 78 Z" fill="rgba(57,255,20,0.3)" stroke="#39FF14" strokeWidth="1.5" />
-                </g>
-
-                {/* Handlebar */}
-                <g style={{ opacity: visibleParts.has("frame") ? 1 : 0 }}>
-                  <path d="M268 88 Q290 78 295 90" stroke="#39FF14" strokeWidth="3" fill="none" strokeLinecap="round" />
-                </g>
-              </svg>
+          {/* Left: YouTube Video Embed Container */}
+          <div className="relative flex flex-col gap-4">
+            <div className="text-left mb-1">
+              <h3 className="font-bold text-xl sm:text-2xl text-white tracking-tight uppercase">
+                Have the Ride of <span className="text-white">Your Life</span>
+              </h3>
+              <p className="text-xs font-bold text-[#00B074] uppercase tracking-widest mt-1">
+                Conquer the Road in Style
+              </p>
             </div>
-
-            {/* Assembly steps */}
-            <div className="flex flex-wrap gap-2 justify-center mt-4">
-              {BIKE_PARTS.map((part) => (
-                <div
-                  key={part.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium transition-all duration-500"
-                  style={{
-                    borderColor: visibleParts.has(part.id) ? part.color : "rgba(255,255,255,0.1)",
-                    color: visibleParts.has(part.id) ? part.color : "#4B5563",
-                    background: visibleParts.has(part.id) ? `${part.color}15` : "transparent",
-                  }}
-                >
-                  {visibleParts.has(part.id) && (
-                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: part.color }} />
-                  )}
-                  {part.label}
-                </div>
-              ))}
+            
+            <div className="rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+              <div className="bg-[#0A0A0A] aspect-video relative group">
+                {!isPlaying ? (
+                  <div 
+                    onClick={() => setIsPlaying(true)}
+                    className="relative w-full h-full cursor-pointer overflow-hidden group/thumb"
+                  >
+                    <img 
+                      src={currentData.image} 
+                      alt="Video Thumbnail" 
+                      className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-700 brightness-[0.75]" 
+                    />
+                    {/* Glowing play overlay core */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover/thumb:bg-black/10 transition-colors">
+                      <div className="w-16 h-16 rounded-full bg-white border border-white/20 flex items-center justify-center group-hover/thumb:scale-110 transition-all duration-300 shadow-lg shadow-black/50">
+                        <Play className="w-6 h-6 text-black" fill="black" />
+                      </div>
+                    </div>
+                    {/* Badge */}
+                    <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/85 border border-white/10">
+                      <span className="w-2 h-2 rounded-full bg-[#00B074] animate-pulse" />
+                      <span className="text-[10px] text-white font-bold uppercase tracking-wider">
+                        {currentData.videoUrl ? "Play HD Product Video" : "Play Road Test Demo"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  currentData.videoUrl ? (
+                    <video 
+                      src={currentData.videoUrl}
+                      controls
+                      autoPlay
+                      className="w-full h-full object-cover bg-black"
+                    />
+                  ) : (
+                    <iframe
+                      className="w-full h-full object-cover"
+                      src="https://www.youtube.com/embed/SZpn9iVLQIU?autoplay=1&si=e2n_TqC729KxG-bX"
+                      title="TRIP E-Bikes Video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  )
+                )}
+              </div>
+            </div>
+            {/* Play video notice */}
+            <div className="text-center">
+              <p className="text-[11px] text-gray-500 uppercase tracking-widest font-semibold">
+                🎥 Featuring: {currentData.videoUrl ? `${currentData.name} HD Video Showcase` : "Assembly and Road test demonstration"}
+              </p>
             </div>
           </div>
 
           {/* Right: Performance metrics */}
           <div className="space-y-6">
-            {METRICS.map((metric, i) => (
-              <div
-                key={metric.label}
-                className="relative"
-                style={{
-                  opacity: active ? 1 : 0,
-                  transform: active ? "translateX(0)" : "translateX(40px)",
-                  transition: `all 0.7s ease ${i * 200 + 600}ms`,
-                }}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-gray-400 font-medium">{metric.label}</p>
-                  <p className="font-orbitron font-bold text-2xl" style={{ color: metric.color }}>
-                    <AnimatedCounter target={metric.value} suffix={metric.suffix} active={active} duration={2000 + i * 200} />
+            {/* Model Switcher Tab Header */}
+            <div className="flex flex-col sm:flex-row gap-2 p-1.5 rounded-xl bg-black/40 border border-white/5 items-stretch sm:items-center">
+              {liveProducts.length > 0 ? (
+                liveProducts.map((p, idx) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedIdx(idx);
+                      setIsPlaying(false);
+                    }}
+                    className={`flex-1 py-2.5 px-3 flex items-center justify-center rounded-lg text-[11px] font-semibold transition-all duration-300 text-center leading-tight ${
+                      selectedIdx === idx
+                        ? "bg-white text-black font-bold scale-[1.02]"
+                        : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
+                    }`}
+                  >
+                    {p.name.replace("Electric Bike", "").replace("E-Bike", "").trim()}
+                  </button>
+                ))
+              ) : (
+                <div className="flex-1 text-center text-sm text-gray-500 font-semibold py-2">Loading live models...</div>
+              )}
+            </div>
+
+            {/* Metrics List */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+              {currentData.metrics.map((metric, i) => (
+                <div
+                  key={metric.label}
+                  className="relative"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">{metric.label}</p>
+                    <p className="font-bold text-xl" style={{ color: metric.color }}>
+                      <AnimatedCounter target={metric.value} suffix={metric.suffix} active={active} duration={1500} />
+                    </p>
+                  </div>
+                  <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-1000 bg-white"
+                      style={{
+                        width: active ? `${metric.barWidth}%` : "0%",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Quick specifications display */}
+            <div className="grid grid-cols-3 gap-3 p-4 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md">
+              {currentData.details.map((detail) => (
+                <div key={detail.label} className="text-left">
+                  <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold mb-1">{detail.label}</p>
+                  <p className="text-xs text-white font-semibold truncate" title={detail.value}>
+                    {detail.value}
                   </p>
                 </div>
-                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-1500"
-                    style={{
-                      width: active ? `${metric.barWidth}%` : "0%",
-                      background: `linear-gradient(90deg, ${metric.color}, ${metric.color}80)`,
-                      boxShadow: active ? `0 0 10px ${metric.color}60` : "none",
-                      transitionDelay: `${i * 200 + 800}ms`,
-                      transitionDuration: "1200ms",
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
+            {/* Stats Block */}
             <div
-              className="mt-8 p-5 rounded-2xl border border-[#39FF14]/20 bg-[#39FF14]/5"
-              style={{
-                opacity: active ? 1 : 0,
-                transform: active ? "translateY(0)" : "translateY(20px)",
-                transition: "all 0.8s ease 1600ms",
-              }}
+              className="p-5 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md"
             >
-              <p className="text-xs text-[#39FF14] font-semibold tracking-widest uppercase mb-3">Real-World Performance</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "CO₂ Saved/Year", value: "1.2T" },
-                  { label: "Fuel Cost Saved", value: "₱0/day" },
-                  { label: "Charge Time", value: "5–6 hrs" },
-                  { label: "Service Life", value: "8+ Years" },
-                ].map((stat) => (
+              <p className="text-xs text-white font-semibold tracking-widest uppercase mb-3">Real-World Benefits</p>
+              <div className="grid grid-cols-2 gap-4">
+                {currentData.stats.map((stat) => (
                   <div key={stat.label}>
-                    <p className="font-orbitron font-bold text-lg text-white">{stat.value}</p>
-                    <p className="text-xs text-gray-500">{stat.label}</p>
+                    <p className="font-bold text-lg text-white">{stat.value}</p>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wide">{stat.label}</p>
                   </div>
                 ))}
               </div>

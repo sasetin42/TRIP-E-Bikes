@@ -23,10 +23,10 @@ interface CustomerAuthModalProps {
   subtitle?: string;
 }
 
-// Shared input class — solid dark bg defeats browser autofill white flash
+// Shared input class — solid light bg defeats browser autofill flash
 const INPUT_BASE =
-  "w-full border border-white/10 rounded-xl py-3.5 text-white placeholder-gray-600 text-sm transition-all focus:outline-none focus:border-[#39FF14]/50";
-const INPUT_DARK_STYLE = { background: "#1C1C1C" };
+  "w-full border border-black/10 rounded-xl py-3.5 text-black placeholder-gray-400 text-sm transition-all focus:outline-none focus:border-black";
+const INPUT_LIGHT_STYLE = { background: "#FAFAFA" };
 
 export default function CustomerAuthModal({
   open,
@@ -178,39 +178,38 @@ export default function CustomerAuthModal({
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       <div
-        className="relative w-full max-w-lg rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
-        style={{ background: "linear-gradient(145deg, #141414 0%, #0F0F0F 100%)" }}
+        className="relative w-full max-w-lg rounded-2xl overflow-hidden border border-black/5 shadow-2xl bg-white"
       >
         {/* Top accent bar */}
-        <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#39FF14] to-[#00FFFF]" />
+        <div className="h-[3px] w-full bg-black" />
 
         <div className="p-8">
           {/* Header */}
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center shrink-0">
-                <Zap className="w-5 h-5 text-[#39FF14]" />
+              <div className="w-10 h-10 rounded-xl bg-black/5 border border-black/10 flex items-center justify-center shrink-0">
+                <Zap className="w-5 h-5 text-black" />
               </div>
               <div>
-                <p className="text-[10px] text-[#39FF14] tracking-[0.2em] uppercase font-semibold">TRIP Mobility</p>
-                <h2 className="font-orbitron font-bold text-xl text-white">
+                <p className="text-[10px] text-[#707070] tracking-[0.2em] uppercase font-semibold">TRIP Mobility</p>
+                <h2 className="font-orbitron font-bold text-xl text-black">
                   {title || "Account Required"}
                 </h2>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-white border border-white/10 hover:border-white/30 transition-all text-lg leading-none"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-[#707070] hover:text-black border border-black/5 hover:border-black/20 transition-all text-lg leading-none"
             >
               ×
             </button>
           </div>
 
           {subtitle && (
-            <p className="text-gray-400 text-sm mb-6 leading-relaxed bg-[#39FF14]/5 border border-[#39FF14]/15 rounded-xl p-4">
+            <p className="text-[#707070] text-sm mb-6 leading-relaxed bg-black/5 border border-black/10 rounded-xl p-4">
               {subtitle}
             </p>
           )}
@@ -218,55 +217,15 @@ export default function CustomerAuthModal({
           {/* ── CHOOSE ── */}
           {mode === "choose" && (
             <div className="space-y-4">
-              {/* Demo customer shortcut */}
-              <div className="p-3.5 rounded-xl border border-[#39FF14]/25 bg-[#39FF14]/5">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#39FF14]" />
-                  <span className="text-xs text-[#39FF14] font-bold uppercase tracking-wide">Try Demo Account</span>
-                  <span className="ml-auto px-1.5 py-0.5 bg-[#39FF14]/20 rounded text-[9px] text-[#39FF14] font-bold">FREE</span>
-                </div>
-                <p className="text-[11px] text-gray-400 mb-2.5">Explore the customer portal instantly — no personal email needed.</p>
-                <button
-                  onClick={async () => {
-                    setLoading(true);
-                    const { data, error } = await supabase.auth.signInWithPassword({
-                      email: "demo.customer@tripmobility.ph",
-                      password: "DemoTrip2026!",
-                    });
-                    if (error || !data.user) {
-                      toast.error("Demo login failed. Please use the sign-in form.");
-                      setMode("login");
-                      setEmail("demo.customer@tripmobility.ph");
-                      setPassword("DemoTrip2026!");
-                    } else {
-                      login(mapCustomer({ id: data.user.id, email: data.user.email || "", username: data.user.user_metadata?.username }));
-                      toast.success("Demo account loaded! Welcome.");
-                      onSuccess();
-                    }
-                    setLoading(false);
-                  }}
-                  disabled={loading}
-                  className="w-full py-2 rounded-lg text-xs font-bold bg-[#39FF14] text-[#0A0A0A] hover:bg-[#4FFF2A] transition-all disabled:opacity-60"
-                >
-                  {loading ? "Loading..." : "⚡ Enter as Demo Customer"}
-                </button>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-white/8" />
-                <span className="text-[10px] text-gray-600 uppercase tracking-widest">or create account</span>
-                <div className="flex-1 h-px bg-white/8" />
-              </div>
-
-              <p className="text-gray-400 text-sm text-center">
+              <p className="text-[#707070] text-sm text-center">
                 Create a free account or sign in to submit your quote
               </p>
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 {benefits.map((b, i) => (
-                  <div key={i} className="flex items-center gap-2 p-3 rounded-xl border border-white/5" style={{ background: "rgba(255,255,255,0.03)" }}>
-                    <b.icon className="w-4 h-4 text-[#39FF14] shrink-0" />
-                    <p className="text-xs text-gray-400">{b.text}</p>
+                  <div key={i} className="flex items-center gap-2 p-3 rounded-xl border border-black/5 bg-[#FAFAFA]">
+                    <b.icon className="w-4 h-4 text-black shrink-0" />
+                    <p className="text-xs text-[#707070]">{b.text}</p>
                   </div>
                 ))}
               </div>
@@ -293,11 +252,11 @@ export default function CustomerAuthModal({
             <div className="space-y-4">
               <button
                 onClick={() => { setMode("choose"); resetFlow(); }}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors mb-1"
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-black transition-colors mb-1"
               >
                 <ArrowLeft className="w-3 h-3" /> Back
               </button>
-              <h3 className="font-semibold text-white text-lg">Create Your Account</h3>
+              <h3 className="font-semibold text-black text-lg">Create Your Account</h3>
 
               {/* Step 1 — email */}
               {step === "email" && (
@@ -312,7 +271,7 @@ export default function CustomerAuthModal({
                       placeholder="Your name"
                       autoComplete="name"
                       className={`${INPUT_BASE} px-4`}
-                      style={INPUT_DARK_STYLE}
+                      style={INPUT_LIGHT_STYLE}
                     />
                   </div>
 
@@ -330,7 +289,7 @@ export default function CustomerAuthModal({
                         placeholder="your@email.com"
                         autoComplete="email"
                         className={`${INPUT_BASE} pl-11 pr-4`}
-                        style={INPUT_DARK_STYLE}
+                        style={INPUT_LIGHT_STYLE}
                       />
                     </div>
                   </div>
@@ -348,9 +307,9 @@ export default function CustomerAuthModal({
               {/* Step 2 — OTP + password */}
               {step === "otp" && (
                 <>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-[#707070] text-sm">
                     Code sent to{" "}
-                    <span className="text-white font-semibold">{email}</span>
+                    <span className="text-black font-semibold">{email}</span>
                   </p>
 
                   <div>
@@ -365,7 +324,7 @@ export default function CustomerAuthModal({
                       placeholder="000000"
                       autoComplete="one-time-code"
                       className={`${INPUT_BASE} px-4 text-center text-2xl tracking-[0.5em] font-orbitron`}
-                      style={INPUT_DARK_STYLE}
+                      style={INPUT_LIGHT_STYLE}
                     />
                   </div>
 
@@ -374,8 +333,8 @@ export default function CustomerAuthModal({
                       <span>Create Password</span>
                       {password && (
                         <span className={`text-[10px] font-semibold ${
-                          getPasswordStrength(password).level === 3 ? "text-[#39FF14]" :
-                          getPasswordStrength(password).level === 2 ? "text-yellow-400" : "text-red-400"
+                          getPasswordStrength(password).level === 3 ? "text-green-600" :
+                          getPasswordStrength(password).level === 2 ? "text-yellow-600" : "text-red-600"
                         }`}>{getPasswordStrength(password).label}</span>
                       )}
                     </label>
@@ -389,25 +348,28 @@ export default function CustomerAuthModal({
                         placeholder="Min. 6 characters"
                         autoComplete="new-password"
                         className={`${INPUT_BASE} pl-11 pr-12`}
-                        style={INPUT_DARK_STYLE}
+                        style={INPUT_LIGHT_STYLE}
                       />
                       <button
                         type="button"
                         onClick={() => setShowPass(!showPass)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors z-10"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black transition-colors z-10"
                       >
                         {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                     {password && (
                       <div className="mt-2">
-                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-1 bg-black/10 rounded-full overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-300 ${getPasswordStrength(password).color}`}
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              getPasswordStrength(password).level === 3 ? "bg-green-500" :
+                              getPasswordStrength(password).level === 2 ? "bg-yellow-500" : "bg-red-500"
+                            }`}
                             style={{ width: getPasswordStrength(password).width }}
                           />
                         </div>
-                        <p className="text-[10px] text-gray-600 mt-1">
+                        <p className="text-[10px] text-gray-400 mt-1">
                           {getPasswordStrength(password).level < 3 ? "Add uppercase, numbers or symbols for a stronger password" : "Great password!"}
                         </p>
                       </div>
@@ -428,15 +390,15 @@ export default function CustomerAuthModal({
                       disabled={resendCooldown > 0 || loading}
                       className={`flex-1 text-xs font-semibold py-2.5 px-4 rounded-xl border transition-all ${
                         resendCooldown > 0 || loading
-                          ? "border-white/8 text-gray-600 cursor-not-allowed bg-white/2"
-                          : "border-[#39FF14]/30 text-[#39FF14] hover:bg-[#39FF14]/8 hover:border-[#39FF14]/50"
+                          ? "border-black/5 text-gray-400 cursor-not-allowed bg-black/5"
+                          : "border-black/20 text-black hover:bg-black/5 hover:border-black/40"
                       }`}
                     >
                       {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend Code"}
                     </button>
                     <button
                       onClick={() => setStep("email")}
-                      className="text-xs text-gray-600 hover:text-gray-400 transition-colors whitespace-nowrap"
+                      className="text-xs text-gray-400 hover:text-black transition-colors whitespace-nowrap"
                     >
                       Change email
                     </button>
@@ -451,29 +413,11 @@ export default function CustomerAuthModal({
             <div className="space-y-4">
               <button
                 onClick={() => { setMode("choose"); resetFlow(); }}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition-colors mb-1"
+                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-black transition-colors mb-1"
               >
                 <ArrowLeft className="w-3 h-3" /> Back
               </button>
-              <h3 className="font-semibold text-white text-lg">Sign In</h3>
-
-              {/* Demo account */}
-              <div className="p-3 rounded-xl border border-[#39FF14]/20 bg-[#39FF14]/5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-[#39FF14]" />
-                  <span className="text-xs text-[#39FF14] font-semibold uppercase tracking-wide">Demo Customer Account</span>
-                </div>
-                <p className="text-[11px] text-gray-400 mb-2.5">Try the customer portal instantly — no sign-up required.</p>
-                <button
-                  onClick={() => {
-                    setEmail("demo.customer@tripmobility.ph");
-                    setPassword("DemoTrip2026!");
-                  }}
-                  className="w-full py-2 rounded-lg text-xs font-bold bg-[#39FF14]/15 border border-[#39FF14]/30 text-[#39FF14] hover:bg-[#39FF14]/25 transition-all"
-                >
-                  ⚡ Use Demo Credentials
-                </button>
-              </div>
+              <h3 className="font-semibold text-black text-lg">Sign In</h3>
 
               <div>
                 <label className="block text-xs text-gray-500 mb-2 uppercase tracking-wide">
@@ -488,7 +432,7 @@ export default function CustomerAuthModal({
                     placeholder="your@email.com"
                     autoComplete="email"
                     className={`${INPUT_BASE} pl-11 pr-4`}
-                    style={INPUT_DARK_STYLE}
+                    style={INPUT_LIGHT_STYLE}
                   />
                 </div>
               </div>
@@ -507,12 +451,12 @@ export default function CustomerAuthModal({
                     placeholder="Your password"
                     autoComplete="current-password"
                     className={`${INPUT_BASE} pl-11 pr-12`}
-                    style={INPUT_DARK_STYLE}
+                    style={INPUT_LIGHT_STYLE}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors z-10"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black transition-colors z-10"
                   >
                     {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>

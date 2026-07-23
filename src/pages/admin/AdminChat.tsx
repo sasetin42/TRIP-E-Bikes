@@ -110,7 +110,12 @@ export default function AdminChat() {
       .select("*")
       .order("last_message_at", { ascending: false });
 
-    if (error) { if (!silent) setLoading(false); return; }
+    if (error) {
+      if (error.code === "PGRST301" || (error as any)?.status === 403) {
+        if (!silent) console.warn("Chat sessions table not accessible (RLS may not be configured). Run supabase_missing_tables.sql");
+      }
+      if (!silent) setLoading(false); return;
+    }
 
     const enriched = await Promise.all((data || []).map(async (s) => {
       const { count } = await supabase
@@ -126,7 +131,7 @@ export default function AdminChat() {
         .eq("session_id", s.id)
         .order("created_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       return { ...s, unread_count: count || 0, last_message: lastMsg?.message || "" };
     }));
@@ -147,11 +152,12 @@ export default function AdminChat() {
 
   const fetchMessages = useCallback(async () => {
     if (!selected) return;
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("chat_messages")
       .select("*")
       .eq("session_id", selected.id)
       .order("created_at", { ascending: true });
+    if (error) return;
     setMessages(data || []);
 
     await supabase
@@ -166,7 +172,7 @@ export default function AdminChat() {
 
   useEffect(() => {
     fetchSessions();
-    const interval = setInterval(() => fetchSessions(true), 5000);
+    const interval = setInterval(() => fetchSessions(true), 30000);
     return () => clearInterval(interval);
   }, [fetchSessions]);
 
@@ -175,7 +181,7 @@ export default function AdminChat() {
     setMsgLoading(true);
     fetchMessages().then(() => setMsgLoading(false));
     if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(fetchMessages, 3000);
+    pollRef.current = setInterval(fetchMessages, 15000);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [selected, fetchMessages]);
 
@@ -193,6 +199,7 @@ export default function AdminChat() {
     });
     await supabase.from("chat_sessions").update({
       assigned_agent: user?.username,
+      last_message: msg,
       last_message_at: new Date().toISOString(),
     }).eq("id", selected.id);
     await fetchMessages();
@@ -253,7 +260,7 @@ export default function AdminChat() {
           {"Notification" in window && (
             <button
               onClick={notifPermission === "granted" ? undefined : requestNotificationPermission}
-              className={`flex items-center gap-2 px-4 py-2.5 glass rounded-xl border text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-4 py-2.5 bg-white/5 backdrop-blur-md rounded-xl border text-xs font-semibold transition-all ${
                 notifPermission === "granted"
                   ? "border-[#39FF14]/30 text-[#39FF14] cursor-default"
                   : notifPermission === "denied"
@@ -270,7 +277,7 @@ export default function AdminChat() {
               }
             </button>
           )}
-          <button onClick={() => fetchSessions()} disabled={loading} className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all">
+          <button onClick={() => fetchSessions()} disabled={loading} className="flex items-center gap-2 px-4 py-2.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />Refresh
           </button>
         </div>
@@ -278,7 +285,7 @@ export default function AdminChat() {
 
       {/* Notification Banner (if not set) */}
       {notifPermission === "default" && (
-        <div className="flex items-center gap-3 px-4 py-3 glass rounded-xl border border-yellow-500/20 bg-yellow-500/5 mb-4">
+        <div className="flex items-center gap-3 px-4 py-3 bg-white/5 backdrop-blur-md rounded-xl border border-yellow-500/20 bg-yellow-500/5 mb-4">
           <Bell className="w-4 h-4 text-yellow-400 shrink-0" />
           <p className="text-xs text-gray-300 flex-1">Enable desktop notifications to get alerted when customers send new messages, even when this tab is in the background.</p>
           <button onClick={requestNotificationPermission} className="shrink-0 px-3 py-1.5 bg-yellow-500 text-[#0A0A0A] rounded-lg text-xs font-bold hover:bg-yellow-400 transition-all">
@@ -293,7 +300,7 @@ export default function AdminChat() {
           <div className="flex flex-col gap-2 mb-3">
             <div className="relative">
               <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className="w-full border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#39FF14]/30 transition-all" style={{ background: "#111" }} />
+              <input id="chat-search" name="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email..." className="w-full border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#39FF14]/30 transition-all" style={{ background: "#111" }} />
             </div>
             <div className="flex gap-1.5 overflow-x-auto">
               {["all", "open", "waiting", "closed"].map(s => (
@@ -318,7 +325,7 @@ export default function AdminChat() {
               const isSelected = selected?.id === s.id;
               return (
                 <div key={s.id} onClick={() => setSelected(s)}
-                  className={`glass rounded-xl border p-4 cursor-pointer transition-all ${isSelected ? "border-[#39FF14]/40 bg-[#39FF14]/5" : "border-white/5 hover:border-white/10"}`}>
+                  className={`bg-white/5 backdrop-blur-md rounded-xl border p-4 cursor-pointer transition-all ${isSelected ? "border-[#39FF14]/40 bg-[#39FF14]/5" : "border-white/5 hover:border-white/10"}`}>
                   <div className="flex items-start gap-3">
                     <div className="relative shrink-0">
                       <div className="w-9 h-9 rounded-full bg-white/8 border border-white/10 flex items-center justify-center font-bold text-white text-sm">
@@ -348,7 +355,7 @@ export default function AdminChat() {
         </div>
 
         {/* Chat Panel */}
-        <div className="flex-1 flex flex-col glass rounded-xl border border-white/5 overflow-hidden min-w-0">
+        <div className="flex-1 flex flex-col bg-white/5 backdrop-blur-md rounded-xl border border-white/5 overflow-hidden min-w-0">
           {!selected ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <div className="w-20 h-20 rounded-2xl bg-[#39FF14]/8 border border-[#39FF14]/15 flex items-center justify-center mb-5">
@@ -357,7 +364,7 @@ export default function AdminChat() {
               <h3 className="font-orbitron font-bold text-xl text-white mb-2">Select a Conversation</h3>
               <p className="text-gray-500 text-sm max-w-xs mb-6">Choose a chat session from the left panel to view messages and reply to customers in real-time.</p>
               {notifPermission !== "granted" && "Notification" in window && (
-                <button onClick={requestNotificationPermission} className="flex items-center gap-2 px-5 py-3 glass rounded-xl border border-yellow-500/30 text-yellow-400 text-sm hover:bg-yellow-500/10 transition-all">
+                <button onClick={requestNotificationPermission} className="flex items-center gap-2 px-5 py-3 bg-white/5 backdrop-blur-md rounded-xl border border-yellow-500/30 text-yellow-400 text-sm hover:bg-yellow-500/10 transition-all">
                   <Bell className="w-4 h-4" />Enable Desktop Notifications
                 </button>
               )}
@@ -379,7 +386,7 @@ export default function AdminChat() {
                 <div className="flex items-center gap-2 shrink-0">
                   {["open", "waiting", "closed"].filter(s => s !== selected.status).map(s => (
                     <button key={s} onClick={() => updateStatus(selected.id, s)}
-                      className="px-3 py-1.5 glass rounded-lg border border-white/10 text-xs font-semibold text-gray-400 hover:text-white transition-all capitalize">
+                      className="px-3 py-1.5 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-xs font-semibold text-gray-400 hover:text-white transition-all capitalize">
                       Mark {s}
                     </button>
                   ))}
@@ -437,6 +444,8 @@ export default function AdminChat() {
                 <div className="px-4 py-4 border-t border-white/8 shrink-0">
                   <div className="flex gap-3 items-end">
                     <textarea
+                      id="chat-message"
+                      name="message"
                       value={input}
                       onChange={e => setInput(e.target.value)}
                       onKeyDown={handleKeyDown}
@@ -459,3 +468,4 @@ export default function AdminChat() {
     </div>
   );
 }
+

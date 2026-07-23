@@ -43,67 +43,66 @@ export default function IndustriesPage() {
   const details = INDUSTRY_DETAILS[activeIndustry];
 
   return (
-    <div className="bg-[#0A0A0A] min-h-screen">
+    <div className="bg-white min-h-screen text-black">
       {/* Hero */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
+      <section className="relative pt-24 pb-12 overflow-hidden bg-[#FAFAFA]">
         <ParticleField />
-        <div className="absolute inset-0 bg-hero-gradient" />
         <div className="relative max-w-7xl mx-auto px-6 text-center">
-          <p className="section-label mb-4">Industry Solutions</p>
-          <h1 className="font-orbitron font-black text-5xl sm:text-6xl text-white mb-6">
-            E-Mobility for Every <span className="gradient-text">Sector</span>
+          <p className="text-[10px] font-bold text-[#707070] uppercase tracking-[0.3em] mb-4">Industry Solutions</p>
+          <h1 className="text-[35px] font-bold text-black mb-6 uppercase tracking-tight">
+            E-Mobility for Every <span className="text-[#707070]">Sector</span>
           </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+          <p className="text-[#707070] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
             From individual delivery riders to government fleets — TRIP Mobility has purpose-built solutions for every Philippine industry.
           </p>
         </div>
       </section>
 
       {/* Industry Navigator */}
-      <section className="py-16">
+      <section className="py-[50px] border-t border-black/5">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-16">
             {INDUSTRIES.map((ind) => {
               const Icon = ICON_MAP[ind.icon];
               return (
                 <button
                   key={ind.id}
                   onClick={() => setActiveIndustry(ind.id)}
-                  className={`p-4 rounded-xl border transition-all duration-300 flex flex-col items-center gap-2 ${
+                  className={`p-6 rounded-[2px] border transition-all duration-300 flex flex-col items-center gap-3 ${
                     activeIndustry === ind.id
-                      ? "border-[#39FF14]/60 bg-[#39FF14]/10 text-[#39FF14]"
-                      : "border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
+                      ? "border-black bg-black text-white shadow-premium"
+                      : "border-black/5 bg-[#FAFAFA] text-[#707070] hover:border-black/20 hover:text-black"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
-                  <span className="text-xs font-semibold text-center leading-tight">{ind.title}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight">{ind.title}</span>
                 </button>
               );
             })}
           </div>
 
           {/* Active Industry Detail */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
             <SectionObserver>
-              <div className={`rounded-2xl p-8 bg-gradient-to-br ${active.color} border border-white/5`}>
-                <div className="mb-6">
-                  <p className="text-[#39FF14] font-bold text-sm uppercase tracking-widest mb-2">{active.stat}</p>
-                  <h2 className="font-orbitron font-bold text-3xl text-white mb-4">{active.title}</h2>
-                  <p className="text-gray-400 leading-relaxed">{active.description}</p>
+              <div className={`p-10 bg-[#FAFAFA] border border-black/5 hover:border-black transition-all duration-300`}>
+                <div className="mb-8">
+                  <p className="text-black font-bold text-[10px] uppercase tracking-widest mb-3">{active.stat}</p>
+                  <h2 className="text-4xl font-bold text-black uppercase tracking-tight mb-4">{active.title}</h2>
+                  <p className="text-[#707070] leading-relaxed font-medium text-sm">{active.description}</p>
                 </div>
 
-                <div className="space-y-3 mb-8">
+                <div className="space-y-4 mb-10">
                   {details.benefits.map((b, i) => (
                     <div key={i} className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-[#39FF14] shrink-0 mt-0.5" />
-                      <p className="text-gray-300 text-sm">{b}</p>
+                      <CheckCircle className="w-5 h-5 text-black shrink-0 mt-0.5" />
+                      <p className="text-black text-sm font-medium">{b}</p>
                     </div>
                   ))}
                 </div>
 
                 <button
                   onClick={() => setQuoteOpen(true)}
-                  className="btn-primary w-full flex items-center justify-center gap-2"
+                  className="btn-primary w-full flex items-center justify-center gap-2 h-14 text-xs font-bold uppercase tracking-widest"
                 >
                   Get Industry Quote <ArrowRight className="w-4 h-4" />
                 </button>
@@ -111,19 +110,21 @@ export default function IndustriesPage() {
             </SectionObserver>
 
             <SectionObserver delay={150}>
-              <div>
-                <p className="section-label mb-3">Case Study</p>
-                <div className="glass rounded-2xl p-8 border border-white/5 mb-6">
-                  <h3 className="font-orbitron font-bold text-xl text-white mb-3">{details.caseStudy.title}</h3>
-                  <p className="text-gray-300 leading-relaxed">{details.caseStudy.result}</p>
+              <div className="space-y-8">
+                <div>
+                  <p className="text-[10px] font-bold text-[#707070] uppercase tracking-widest mb-4">Case Study</p>
+                  <div className="p-8 border border-black/5 bg-[#FAFAFA]">
+                    <h3 className="text-xl font-bold text-black uppercase tracking-tight mb-3">{details.caseStudy.title}</h3>
+                    <p className="text-[#707070] leading-relaxed font-medium text-sm">{details.caseStudy.result}</p>
+                  </div>
                 </div>
 
-                <div className="glass rounded-2xl p-6 border border-[#39FF14]/20 bg-[#39FF14]/5">
-                  <p className="text-xs text-[#39FF14] uppercase tracking-widest font-semibold mb-3">Recommended Model</p>
-                  <p className="text-white font-bold text-lg">
+                <div className="p-8 border border-black/10 bg-black text-white">
+                  <p className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold mb-3">Recommended Model</p>
+                  <p className="text-white font-bold text-2xl uppercase tracking-tight">
                     {activeIndustry === "delivery" || activeIndustry === "logistics" ? "TRIP Cargo Pro" : activeIndustry === "mountain" ? "TRIP Ranger 750" : "TRIP Fold X"}
                   </p>
-                  <p className="text-gray-400 text-sm mt-2">
+                  <p className="text-zinc-400 text-sm mt-3 font-medium">
                     {activeIndustry === "delivery" ? "500W motor · 100–120 km range · Dual battery" : "500W motor · 40–50 km range · Foldable"}
                   </p>
                 </div>
@@ -134,9 +135,9 @@ export default function IndustriesPage() {
       </section>
 
       {/* Stats Band */}
-      <section className="py-16 bg-[#0D0D0D]">
+      <section className="py-[50px] bg-white border-t border-black/5">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               { value: "200+", label: "Business Clients" },
               { value: "12", label: "LGU Partners" },
@@ -144,9 +145,9 @@ export default function IndustriesPage() {
               { value: "80%", label: "Avg Cost Reduction" },
             ].map((stat, i) => (
               <SectionObserver key={i} delay={i * 100}>
-                <div className="text-center">
-                  <p className="font-orbitron font-black text-4xl text-[#39FF14] mb-2">{stat.value}</p>
-                  <p className="text-gray-400 text-sm">{stat.label}</p>
+                <div className="text-center p-6 border border-black/5 bg-[#FAFAFA] hover:border-black transition-colors">
+                  <p className="text-4xl md:text-5xl font-bold text-black uppercase tracking-tighter mb-3">{stat.value}</p>
+                  <p className="text-[10px] font-bold text-[#707070] uppercase tracking-widest">{stat.label}</p>
                 </div>
               </SectionObserver>
             ))}
@@ -158,3 +159,4 @@ export default function IndustriesPage() {
     </div>
   );
 }
+

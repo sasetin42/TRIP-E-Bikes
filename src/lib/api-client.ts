@@ -11,7 +11,8 @@ async function request<T = any>(
 ): Promise<ApiResponse<T>> {
   try {
     const method = options.method || "GET";
-    const body = options.body ? JSON.parse(options.body as string) : null;
+    const isFormData = options.body instanceof FormData;
+    const body = isFormData ? options.body as FormData : (options.body ? JSON.parse(options.body as string) : null);
 
     const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
     const urlObj = new URL(cleanEndpoint, "https://api-client.local");
@@ -20,7 +21,21 @@ async function request<T = any>(
 
     let responseData: any = null;
 
-    if (path.includes("settings")) {
+    // ── Upload handler ──────────────────────────────────────────────────────
+    if (path.includes("upload")) {
+      if (method === "POST" && isFormData) {
+        const file = (body as FormData).get("image") as File;
+        if (!file) throw new Error("No image file provided");
+        const fileExt = file.name.split(".").pop() || "webp";
+        const fileName = `products/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("media")
+          .upload(fileName, file, { contentType: file.type || "image/webp", upsert: false });
+        if (uploadError) throw new Error(uploadError.message);
+        const { data: { publicUrl } } = supabase.storage.from("media").getPublicUrl(uploadData.path);
+        responseData = { url: publicUrl };
+      }
+    } else if (path.includes("settings")) {
       if (method === "GET") {
         const { data, error } = await supabase.from("system_settings").select("*");
         if (error) throw new Error(error.message);
@@ -45,7 +60,7 @@ async function request<T = any>(
     } else if (path.includes("products")) {
       if (method === "GET") {
         if (params.id) {
-          const { data, error } = await supabase.from("products_cms").select("*").eq("id", params.id).single();
+          const { data, error } = await supabase.from("products_cms").select("*").eq("product_key", params.id).maybeSingle();
           if (error) throw new Error(error.message);
           responseData = data;
         } else if (params.action === "review_moderation") {
@@ -57,6 +72,18 @@ async function request<T = any>(
           if (error) throw new Error(error.message);
           responseData = data || [];
         }
+      } else if (method === "POST") {
+        const { error } = await supabase.from("products_cms").insert({ ...body, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+        if (error) throw new Error(error.message);
+        responseData = { status: "success" };
+      } else if (method === "PUT") {
+        const { error } = await supabase.from("products_cms").update({ ...body, updated_at: new Date().toISOString() }).eq("product_key", params.id);
+        if (error) throw new Error(error.message);
+        responseData = { status: "success" };
+      } else if (method === "DELETE") {
+        const { error } = await supabase.from("products_cms").delete().eq("product_key", params.id);
+        if (error) throw new Error(error.message);
+        responseData = { status: "success" };
       }
     } else if (path.includes("leads")) {
       if (method === "GET") {
@@ -155,6 +182,87 @@ async function request<T = any>(
         const { data, error } = await supabase.from("loyalty_points").select("*").order("created_at", { ascending: false });
         if (error) throw new Error(error.message);
         responseData = { points: data || [] };
+      }
+    } else if (path.includes("chat")) {
+      if (method === "GET") {
+        const sId = params.session_id;
+        const { data: messages, error } = await supabase
+          .from("chat_messages")
+          .select("*")
+          .eq("session_id", sId)
+          .order("created_at", { ascending: true });
+        if (error) throw new Error(error.message);
+        responseData = { messages: messages || [] };
+      } else if (method === "POST") {
+        if (params.action === "create_session") {
+          const { data, error } = await supabase.from("chat_sessions").upsert({
+            id: body.session_id,
+            customer_name: body.user_name || "Visitor",
+            customer_email: body.user_email || null,
+            status: "open",
+            last_message_at: new Date().toISOString()
+          }).select().single();
+          if (error) throw new Error(error.message);
+          responseData = data;
+        } else if (params.action === "read") {
+          const { error } = await supabase
+            .from("chat_messages")
+            .update({ read: true })
+            .eq("session_id", body.session_id)
+            .eq("sender_type", "agent");
+          if (error) throw new Error(error.message);
+          responseData = { status: "success" };
+        } else {
+          const senderType = body.sender === "user" ? "customer" : body.sender;
+          const senderName = senderType === "customer" ? "You" : (senderType === "bot" ? "TRIP AI" : "Agent");
+          const { data, error } = await supabase.from("chat_messages").insert({
+            session_id: body.session_id,
+            sender_type: senderType,
+            sender_name: senderName,
+            message: body.message,
+            read: senderType === "customer"
+          }).select().single();
+          if (error) throw new Error(error.message);
+
+          // Update last_message in session
+          await supabase.from("chat_sessions").update({
+            last_message: body.message,
+            last_message_at: new Date().toISOString()
+          }).eq("id", body.session_id);
+
+          responseData = data;
+        }
+      }
+    } else if (path.includes("ai-chat-bot")) {
+      if (method === "POST") {
+        let reply = "I would be happy to help you with that! Could you please specify which model you are interested in (TRIP Cargo Pro, TRIP Fold X, or TRIP Ranger 750)?";
+        const lower = (body.message || "").toLowerCase();
+        if (lower.includes("warranty")) {
+          reply = "TRIP E-Bikes come with a premium warranty: **3 years on the frame**, **1 year on the motor**, and **1 year on the battery**. All service is handled at our main showroom.";
+        } else if (lower.includes("financing") || lower.includes("installment") || lower.includes("plan") || lower.includes("payment") || lower.includes("pay") || lower.includes("loan")) {
+          reply = "Yes! We offer flexible financing and installment plans for all our e-bike models. You can pay via **Billease** (up to 12 months installment) or use any major credit card at our flagship store. Would you like me to help you request a custom quotation?";
+        } else if (lower.includes("price") || lower.includes("pricing") || lower.includes("cost") || lower.includes("much")) {
+          reply = "Here is our current price list:\n\n" +
+                  "1. **TRIP Cargo Pro**: ₱58,000 (Built for heavy duty & delivery)\n" +
+                  "2. **TRIP Fold X**: ₱45,000 (Compact & easy to transport)\n" +
+                  "3. **TRIP Ranger 750**: ₱62,000 (All-terrain mountain e-bike)\n\n" +
+                  "Would you like me to help you request a custom quotation?";
+        } else if (lower.includes("location") || lower.includes("address") || lower.includes("where") || lower.includes("store") || lower.includes("showroom")) {
+          reply = "You can visit our showroom at **105 Maryland Street, Cubao, Quezon City, Metro Manila**. We are open daily for test rides!";
+        } else if (lower.includes("contact") || lower.includes("number") || lower.includes("phone") || lower.includes("viber") || lower.includes("whatsapp")) {
+          reply = "You can reach us at **0917 122 8212** or **0917 169 2711**, or email us at **gobindra@ggii.com.ph**.";
+        } else if (lower.includes("cargo")) {
+          reply = "The **TRIP Cargo Pro** (₱58,000) features a powerful 750W motor, a long-range 48V 20Ah battery, and a reinforced cargo rack designed for delivery and utility riders.";
+        } else if (lower.includes("fold") || lower.includes("folding")) {
+          reply = "The **TRIP Fold X** (₱45,000) features a 500W motor, a 48V 14Ah battery, and a folding frame that is lightweight and easy to store in car trunks or small spaces.";
+        } else if (lower.includes("ranger") || lower.includes("mountain") || lower.includes("trail")) {
+          reply = "The **TRIP Ranger 750** (₱62,000) features a 750W motor, a 48V 15Ah battery, fat tires, and front suspension, making it perfect for off-road trails and rough roads.";
+        } else if (lower.includes("test") || lower.includes("ride")) {
+          reply = "Yes, we offer **free test rides** at our Cubao showroom located at 105 Maryland Street, Cubao, Quezon City. Stop by today!";
+        } else if (lower.includes("hello") || lower.includes("hi") || lower.includes("hey")) {
+          reply = "Hello! I'm the TRIP AI Assistant. How can I help you with your e-bike journey today?";
+        }
+        responseData = { reply };
       }
     }
 

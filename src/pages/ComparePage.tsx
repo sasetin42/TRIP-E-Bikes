@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import {
@@ -9,6 +9,7 @@ import { PRODUCTS } from "@/constants/products";
 import QuoteModal from "@/components/features/QuoteModal";
 import CustomerAuthModal from "@/components/features/CustomerAuthModal";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { useSystemSettings } from "@/hooks/useSystemSettings";
 
 const SPEC_LABELS: Record<string, { label: string; icon: any }> = {
   motor:        { label: "Motor Power", icon: Zap },
@@ -23,23 +24,24 @@ const SPEC_LABELS: Record<string, { label: string; icon: any }> = {
   tires:        { label: "Tires", icon: Shield },
 };
 
-const ACCENT_COLORS = ["#39FF14", "#00FFFF", "#FF6B35"];
-const COL_BORDERS  = ["border-[#39FF14]/30", "border-[#00FFFF]/30", "border-[#FF6B35]/30"];
-const COL_BG       = ["bg-[#39FF14]/5", "bg-[#00FFFF]/5", "bg-[#FF6B35]/5"];
-const COL_TEXT     = ["text-[#39FF14]", "text-[#00FFFF]", "text-[#FF6B35]"];
-const COL_BADGE    = ["bg-[#39FF14] text-[#0A0A0A]", "bg-[#00FFFF] text-[#0A0A0A]", "bg-[#FF6B35] text-white"];
+const ACCENT_COLORS = ["#000000", "#333333", "#707070"];
+const COL_BORDERS  = ["border-black", "border-black/30", "border-black/10"];
+const COL_BG       = ["bg-white", "bg-[#FAFAFA]", "bg-white"];
+const COL_TEXT     = ["text-black", "text-[#333333]", "text-[#707070]"];
+const COL_BADGE    = ["bg-black text-white", "bg-black text-white", "bg-black text-white"];
 
 export default function ComparePage() {
   const { customer } = useCustomerAuth();
+  const { settings } = useSystemSettings();
   const [selected, setSelected] = useState<string[]>(["delivery-ebike", "folding-ebike"]);
   const [quoteProduct, setQuoteProduct] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [pendingProduct, setPendingProduct] = useState<string | null>(null);
 
-  const selectedProducts = PRODUCTS.filter(p => selected.includes(p.id));
-  const allProductIds = PRODUCTS.map(p => p.id);
+  const selectedProducts = useMemo(() => PRODUCTS.filter(p => selected.includes(p.id)), [selected]);
+  const allProductIds = useMemo(() => PRODUCTS.map(p => p.id), []);
 
-  const toggleProduct = (id: string) => {
+  const toggleProduct = useCallback((id: string) => {
     setSelected(prev => {
       if (prev.includes(id)) {
         if (prev.length <= 2) return prev; // Keep at least 2
@@ -51,9 +53,9 @@ export default function ComparePage() {
       }
       return [...prev, id];
     });
-  };
+  }, []);
 
-  const handleRequestQuote = (productId: string) => {
+  const handleRequestQuote = useCallback((productId: string) => {
     const product = PRODUCTS.find(p => p.id === productId);
     if (!product) return;
     if (!customer) {
@@ -62,7 +64,7 @@ export default function ComparePage() {
     } else {
       setQuoteProduct(product.name);
     }
-  };
+  }, [customer]);
 
   const handleAuthSuccess = useCallback(() => {
     setShowAuth(false);
@@ -74,48 +76,46 @@ export default function ComparePage() {
   }, [pendingProduct]);
 
   // Check if a spec value differs across selected products
-  const specDiffers = (key: string) => {
+  const specDiffers = useCallback((key: string) => {
     const vals = selectedProducts.map(p => (p.specs as any)[key]);
     return new Set(vals).size > 1;
-  };
+  }, [selectedProducts]);
 
-  const priceMin = Math.min(...selectedProducts.map(p => p.price));
-  const priceMax = Math.max(...selectedProducts.map(p => p.price));
+  const priceMin = useMemo(() => Math.min(...selectedProducts.map(p => p.price)), [selectedProducts]);
+  const priceMax = useMemo(() => Math.max(...selectedProducts.map(p => p.price)), [selectedProducts]);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] pb-24">
+    <div className="min-h-screen bg-white text-black pb-24">
       <Helmet>
         <title>Compare E-Bike Models — TRIP Mobility</title>
         <meta name="description" content="Compare TRIP Mobility e-bike models side-by-side. Full specs, pricing, features, and use cases to help you choose the perfect electric bike." />
       </Helmet>
 
       {/* Hero */}
-      <section className="relative pt-32 pb-16 px-6 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#39FF14]/3 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[#39FF14]/5 rounded-full blur-[100px] pointer-events-none" />
+      <section className="relative pt-24 pb-12 px-6 overflow-hidden bg-[#FAFAFA]">
         <div className="max-w-7xl mx-auto relative text-center">
-          <p className="section-label mb-4">Side-by-Side Comparison</p>
-          <h1 className="font-orbitron font-black text-4xl md:text-5xl text-white mb-4">
-            Find Your <span className="gradient-text">Perfect Ride</span>
+          <p className="text-[10px] font-bold text-[#707070] uppercase tracking-[0.3em] mb-4">Side-by-Side Comparison</p>
+          <h1 className="text-[35px] font-bold text-black mb-6 uppercase tracking-tight">
+            Find Your <span className="text-[#707070]">Perfect Ride</span>
           </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+          <p className="text-[#707070] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
             Compare up to 3 TRIP e-bike models across all specifications, features, and pricing to make an informed decision.
           </p>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6 mt-16">
 
         {/* ── Model Selector ── */}
-        <div className="glass rounded-2xl border border-white/8 p-6 mb-10">
-          <div className="flex items-center justify-between mb-5">
+        <div className="bg-[#FAFAFA] rounded-[2px] border border-black/5 p-8 mb-16">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="font-semibold text-white text-sm">Select Models to Compare</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Choose 2–3 models · {selected.length}/3 selected</p>
+              <h2 className="font-bold text-black text-[11px] uppercase tracking-wider">Select Models to Compare</h2>
+              <p className="text-[10px] text-[#707070] font-bold uppercase tracking-widest mt-1">Choose 2–3 models · {selected.length}/3 selected</p>
             </div>
             <div className="flex gap-1.5">
               {selected.length < 3 && (
-                <span className="text-xs text-gray-500 flex items-center gap-1.5 px-3 py-1.5 glass rounded-lg border border-white/8">
+                <span className="text-[9px] font-bold text-[#707070] uppercase tracking-widest flex items-center gap-1.5 px-4 py-2 bg-white border border-black/5">
                   <Plus className="w-3.5 h-3.5" />Add another model
                 </span>
               )}
@@ -129,23 +129,25 @@ export default function ComparePage() {
                 <button
                   key={p.id}
                   onClick={() => toggleProduct(p.id)}
-                  className={`relative flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
+                  className={`relative flex items-center gap-4 p-5 rounded-[2px] border transition-all text-left ${
                     isSelected
-                      ? `${COL_BORDERS[selIdx] || "border-[#39FF14]/30"} ${COL_BG[selIdx] || "bg-[#39FF14]/5"}`
-                      : "border-white/5 hover:border-white/15 glass"
+                      ? `border-black bg-white shadow-premium`
+                      : "border-black/5 hover:border-black/20 bg-white"
                   }`}
                 >
-                  <div className="w-16 h-12 rounded-lg overflow-hidden shrink-0 bg-white/5 border border-white/10">
+                  <div className="w-16 h-12 rounded-[2px] overflow-hidden shrink-0 bg-[#FAFAFA] border border-black/5">
                     <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-orbitron font-bold text-sm text-white truncate">{p.name}</p>
-                    <p className={`font-bold text-sm ${isSelected ? (COL_TEXT[selIdx] || "text-[#39FF14]") : "text-gray-400"}`}>
-                      ₱{p.price.toLocaleString()}
-                    </p>
+                    <p className={`font-bold text-[10px] uppercase tracking-wider truncate mb-1 ${isSelected ? "text-black" : "text-[#707070]"}`}>{p.name}</p>
+                    {!settings.hide_prices && (
+                      <p className={`font-bold text-xs ${isSelected ? "text-black" : "text-[#707070]"}`}>
+                        ₱{p.price.toLocaleString()}
+                      </p>
+                    )}
                   </div>
                   {isSelected && (
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${COL_BADGE[selIdx] || COL_BADGE[0]}`}>
+                    <div className={`w-6 h-6 flex items-center justify-center text-[10px] font-bold shrink-0 bg-black text-white`}>
                       {selIdx + 1}
                     </div>
                   )}
@@ -157,55 +159,55 @@ export default function ComparePage() {
 
         {/* ── Comparison Table ── */}
         {selectedProducts.length >= 2 && (
-          <div className="space-y-6">
+          <div className="space-y-12">
 
             {/* Product Header Cards */}
             <div className={`grid gap-6`} style={{ gridTemplateColumns: `200px repeat(${selectedProducts.length}, 1fr)` }}>
               {/* Empty corner */}
               <div />
               {selectedProducts.map((p, i) => (
-                <div key={p.id} className={`glass rounded-2xl border ${COL_BORDERS[i]} overflow-hidden`}>
-                  <div className={`h-1 w-full`} style={{ background: ACCENT_COLORS[i] }} />
-                  <div className="p-5">
-                    <div className="relative h-40 rounded-xl overflow-hidden mb-4 bg-[#111] border border-white/5">
-                      <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#111] via-transparent to-transparent" />
+                <div key={p.id} className={`bg-white rounded-[2px] border border-black/5 overflow-hidden hover:border-black transition-all hover:shadow-premium`}>
+                  <div className={`h-1 w-full bg-black`} />
+                  <div className="p-8">
+                    <div className="relative h-40 rounded-[2px] overflow-hidden mb-6 bg-[#FAFAFA] border border-black/5">
+                      <img src={p.image} alt={p.name} className="w-full h-full object-cover mix-blend-multiply" />
                       {p.badge && (
-                        <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-[10px] font-black ${COL_BADGE[i]}`}>
+                        <span className={`absolute top-3 left-3 px-3 py-1 text-[9px] font-bold uppercase tracking-widest bg-black text-white`}>
                           {p.badge}
                         </span>
                       )}
                       <div className="absolute bottom-3 right-3 flex items-center gap-1">
-                        {[1,2,3,4,5].map(s => <Star key={s} className={`w-3 h-3 fill-current ${s <= 4 ? COL_TEXT[i] : "text-gray-700"}`} />)}
+                        {[1,2,3,4,5].map(s => <Star key={s} className={`w-3 h-3 ${s <= 4 ? "text-black fill-black" : "text-gray-200 fill-gray-200"}`} />)}
                       </div>
                     </div>
-                    <p className={`text-[10px] font-semibold tracking-widest uppercase mb-1 ${COL_TEXT[i]}`}>{p.category}</p>
-                    <h3 className="font-orbitron font-black text-lg text-white mb-1">{p.name}</h3>
-                    <p className="text-xs text-gray-500 mb-3 line-clamp-2">{p.tagline}</p>
+                    <p className={`text-[9px] font-bold tracking-widest uppercase mb-2 text-[#707070]`}>{p.category}</p>
+                    <h3 className="font-bold text-lg text-black uppercase tracking-tight mb-2">{p.name}</h3>
+                    <p className="text-[11px] font-medium text-[#707070] mb-5 line-clamp-2 leading-relaxed">{p.tagline}</p>
 
                     {/* Price */}
-                    <div className={`rounded-xl border p-3 ${COL_BORDERS[i]} ${COL_BG[i]} text-center mb-4`}>
-                      <p className="text-xs text-gray-400 mb-0.5">Starting From</p>
-                      <p className={`font-orbitron font-black text-2xl ${COL_TEXT[i]}`}>₱{p.price.toLocaleString()}</p>
-                      {p.price === priceMin && selectedProducts.length > 1 && (
-                        <p className="text-[10px] text-gray-400 mt-1">Most Affordable</p>
-                      )}
-                      {p.price === priceMax && selectedProducts.length > 1 && (
-                        <p className="text-[10px] text-gray-400 mt-1">Premium Option</p>
-                      )}
-                    </div>
+                    {!settings.hide_prices && (
+                      <div className={`border border-black/5 p-4 text-center mb-6 bg-[#FAFAFA]`}>
+                        <p className="text-[9px] font-bold text-[#707070] uppercase tracking-widest mb-1">Starting From</p>
+                        <p className={`font-bold text-2xl tracking-tighter text-black`}>₱{p.price.toLocaleString()}</p>
+                        {p.price === priceMin && selectedProducts.length > 1 && (
+                          <p className="text-[9px] font-bold text-[#707070] uppercase tracking-widest mt-2">Most Affordable</p>
+                        )}
+                        {p.price === priceMax && selectedProducts.length > 1 && (
+                          <p className="text-[9px] font-bold text-[#707070] uppercase tracking-widest mt-2">Premium Option</p>
+                        )}
+                      </div>
+                    )}
 
                     {/* CTA */}
                     <button
                       onClick={() => handleRequestQuote(p.id)}
-                      className="w-full py-2.5 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95"
-                      style={{ background: ACCENT_COLORS[i], color: "#0A0A0A" }}
+                      className="w-full h-12 bg-black text-white text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-gray-800"
                     >
                       Request Quote
                     </button>
                     <Link
                       to={`/products/${p.id}`}
-                      className="flex items-center justify-center gap-1.5 mt-2 text-xs text-gray-500 hover:text-white transition-colors py-1.5"
+                      className="flex items-center justify-center gap-1.5 mt-4 text-[10px] font-bold uppercase tracking-widest text-[#707070] hover:text-black transition-colors"
                     >
                       View Details <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
@@ -215,17 +217,17 @@ export default function ComparePage() {
             </div>
 
             {/* ── Quick Highlights Row ── */}
-            <div className="glass rounded-2xl border border-white/8 overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/8 bg-white/2">
-                <h3 className="font-semibold text-white text-sm">Key Highlights</h3>
+            <div className="bg-white rounded-[2px] border border-black/5 overflow-hidden">
+              <div className="px-8 py-5 border-b border-black/5 bg-[#FAFAFA]">
+                <h3 className="font-bold text-black text-[11px] uppercase tracking-wider">Key Highlights</h3>
               </div>
               <div className={`grid`} style={{ gridTemplateColumns: `200px repeat(${selectedProducts.length}, 1fr)` }}>
-                <div className="p-4 flex items-center">
-                  <span className="text-xs text-gray-600 uppercase tracking-widest font-semibold">Metric</span>
+                <div className="px-8 py-5 flex items-center">
+                  <span className="text-[9px] text-[#707070] uppercase tracking-widest font-bold">Metric</span>
                 </div>
                 {selectedProducts.map((_, i) => (
-                  <div key={i} className={`p-4 text-center border-l border-white/5 ${COL_BG[i]}`}>
-                    <span className={`text-xs font-bold uppercase tracking-widest ${COL_TEXT[i]}`}>Model {i + 1}</span>
+                  <div key={i} className={`p-5 text-center border-l border-black/5 bg-white`}>
+                    <span className={`text-[9px] font-bold uppercase tracking-widest text-black`}>Model {i + 1}</span>
                   </div>
                 ))}
               </div>
@@ -239,21 +241,21 @@ export default function ComparePage() {
                 return (
                   <div
                     key={key}
-                    className={`grid border-t border-white/5 ${rowIdx % 2 === 0 ? "" : "bg-white/1"}`}
+                    className={`grid border-t border-black/5 ${rowIdx % 2 === 0 ? "" : "bg-[#FAFAFA]"}`}
                     style={{ gridTemplateColumns: `200px repeat(${selectedProducts.length}, 1fr)` }}
                   >
-                    <div className="p-4 flex items-center gap-2">
-                      <Icon className="w-4 h-4 text-gray-500 shrink-0" />
-                      <span className="text-xs text-gray-400">{label}</span>
+                    <div className="px-8 py-5 flex items-center gap-3">
+                      <Icon className="w-4 h-4 text-black shrink-0" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#707070]">{label}</span>
                       {differs && (
-                        <span className="ml-auto w-2 h-2 rounded-full bg-yellow-400" title="Values differ" />
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-black" title="Values differ" />
                       )}
                     </div>
                     {selectedProducts.map((p, i) => {
                       const val = (p.specs as any)[key];
                       return (
-                        <div key={p.id} className="p-4 text-center border-l border-white/5">
-                          <span className={`text-sm font-semibold ${differs ? COL_TEXT[i] : "text-white"}`}>
+                        <div key={p.id} className="p-5 text-center border-l border-black/5 flex items-center justify-center">
+                          <span className={`text-xs font-bold ${differs ? "text-black" : "text-[#707070]"}`}>
                             {val || "—"}
                           </span>
                         </div>
@@ -265,49 +267,48 @@ export default function ComparePage() {
             </div>
 
             {/* ── Full Specs Table ── */}
-            <div className="glass rounded-2xl border border-white/8 overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/8 bg-white/2 flex items-center justify-between">
-                <h3 className="font-semibold text-white text-sm">Full Specifications</h3>
-                <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" />
-                  Yellow dot = values differ
+            <div className="bg-white rounded-[2px] border border-black/5 overflow-hidden">
+              <div className="px-8 py-5 border-b border-black/5 bg-[#FAFAFA] flex items-center justify-between">
+                <h3 className="font-bold text-black text-[11px] uppercase tracking-wider">Full Specifications</h3>
+                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-[#707070]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-black inline-block" />
+                  Black dot = values differ
                 </div>
               </div>
               {/* Header Row */}
               <div
-                className="grid border-b border-white/8"
+                className="grid border-b border-black/5"
                 style={{ gridTemplateColumns: `200px repeat(${selectedProducts.length}, 1fr)` }}
               >
-                <div className="px-6 py-3">
-                  <span className="text-xs text-gray-600 uppercase tracking-widest">Specification</span>
+                <div className="px-8 py-4">
+                  <span className="text-[9px] font-bold text-[#707070] uppercase tracking-widest">Specification</span>
                 </div>
                 {selectedProducts.map((p, i) => (
-                  <div key={p.id} className={`px-4 py-3 border-l border-white/5 ${COL_BG[i]} text-center`}>
-                    <span className={`text-xs font-bold ${COL_TEXT[i]}`}>{p.name}</span>
+                  <div key={p.id} className={`px-5 py-4 border-l border-black/5 bg-white text-center`}>
+                    <span className={`text-[9px] font-bold uppercase tracking-widest text-black`}>{p.name}</span>
                   </div>
                 ))}
               </div>
               {/* Spec Rows */}
               {Object.entries(SPEC_LABELS).map(([key, { label, icon: Icon }], rowIdx) => {
                 const differs = specDiffers(key);
-                const allVals = selectedProducts.map(p => (p.specs as any)[key] || "—");
                 return (
                   <div
                     key={key}
-                    className={`grid border-b border-white/5 ${rowIdx % 2 === 0 ? "" : "bg-white/1"}`}
+                    className={`grid border-b border-black/5 ${rowIdx % 2 === 0 ? "" : "bg-[#FAFAFA]"}`}
                     style={{ gridTemplateColumns: `200px repeat(${selectedProducts.length}, 1fr)` }}
                   >
-                    <div className="px-6 py-3.5 flex items-center gap-2">
-                      <Icon className="w-3.5 h-3.5 text-gray-600 shrink-0" />
-                      <span className="text-xs text-gray-400">{label}</span>
-                      {differs && <span className="ml-auto w-2 h-2 rounded-full bg-yellow-400" />}
+                    <div className="px-8 py-4 flex items-center gap-3">
+                      <Icon className="w-3.5 h-3.5 text-black shrink-0" />
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#707070]">{label}</span>
+                      {differs && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-black" />}
                     </div>
                     {selectedProducts.map((p, i) => {
                       const val = (p.specs as any)[key] || "—";
                       const isHighlight = differs;
                       return (
-                        <div key={p.id} className="px-4 py-3.5 text-center border-l border-white/5">
-                          <span className={`text-sm ${isHighlight ? `font-bold ${COL_TEXT[i]}` : "text-gray-300"}`}>
+                        <div key={p.id} className="px-5 py-4 text-center border-l border-black/5 flex items-center justify-center">
+                          <span className={`text-xs font-medium ${isHighlight ? `font-bold text-black` : "text-[#707070]"}`}>
                             {val}
                           </span>
                         </div>
@@ -319,9 +320,9 @@ export default function ComparePage() {
             </div>
 
             {/* ── Features Comparison ── */}
-            <div className="glass rounded-2xl border border-white/8 overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/8 bg-white/2">
-                <h3 className="font-semibold text-white text-sm">Key Features</h3>
+            <div className="bg-white rounded-[2px] border border-black/5 overflow-hidden">
+              <div className="px-8 py-5 border-b border-black/5 bg-[#FAFAFA]">
+                <h3 className="font-bold text-black text-[11px] uppercase tracking-wider">Key Features</h3>
               </div>
               {/* Get all unique features */}
               {(() => {
@@ -329,19 +330,19 @@ export default function ComparePage() {
                 return allFeatures.map((feat, i) => (
                   <div
                     key={i}
-                    className={`grid border-b border-white/5 ${i % 2 === 0 ? "" : "bg-white/1"}`}
+                    className={`grid border-b border-black/5 ${i % 2 === 0 ? "" : "bg-[#FAFAFA]"}`}
                     style={{ gridTemplateColumns: `1fr repeat(${selectedProducts.length}, 80px)` }}
                   >
-                    <div className="px-6 py-3 flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{feat}</span>
+                    <div className="px-8 py-4 flex items-center gap-2">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-black">{feat}</span>
                     </div>
                     {selectedProducts.map((p, pi) => {
                       const has = p.features.some(f => f.toLowerCase().includes(feat.toLowerCase().split(" ")[0]));
                       return (
-                        <div key={p.id} className="px-4 py-3 flex items-center justify-center border-l border-white/5">
+                        <div key={p.id} className="px-4 py-4 flex items-center justify-center border-l border-black/5">
                           {has
-                            ? <Check className={`w-4 h-4 ${COL_TEXT[pi]}`} />
-                            : <Minus className="w-4 h-4 text-gray-700" />
+                            ? <Check className={`w-4 h-4 text-black`} />
+                            : <Minus className="w-4 h-4 text-gray-300" />
                           }
                         </div>
                       );
@@ -352,24 +353,24 @@ export default function ComparePage() {
             </div>
 
             {/* ── Use Cases ── */}
-            <div className="glass rounded-2xl border border-white/8 overflow-hidden">
-              <div className="px-6 py-4 border-b border-white/8 bg-white/2">
-                <h3 className="font-semibold text-white text-sm">Ideal Use Cases</h3>
+            <div className="bg-white rounded-[2px] border border-black/5 overflow-hidden">
+              <div className="px-8 py-5 border-b border-black/5 bg-[#FAFAFA]">
+                <h3 className="font-bold text-black text-[11px] uppercase tracking-wider">Ideal Use Cases</h3>
               </div>
               <div
-                className="grid divide-x divide-white/5"
+                className="grid divide-x divide-black/5"
                 style={{ gridTemplateColumns: `200px repeat(${selectedProducts.length}, 1fr)` }}
               >
-                <div className="p-4 flex items-center">
-                  <span className="text-xs text-gray-500">Best for:</span>
+                <div className="px-8 py-6 flex items-center">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-[#707070]">Best for:</span>
                 </div>
                 {selectedProducts.map((p, i) => (
-                  <div key={p.id} className="p-4">
-                    <div className="space-y-2">
+                  <div key={p.id} className="p-6">
+                    <div className="space-y-3">
                       {p.useCases.map((uc, j) => (
-                        <div key={j} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs ${COL_BG[i]} border ${COL_BORDERS[i]}`}>
-                          <Check className={`w-3 h-3 shrink-0 ${COL_TEXT[i]}`} />
-                          <span className="text-gray-300">{uc}</span>
+                        <div key={j} className={`flex items-center gap-3 px-4 py-3 bg-[#FAFAFA] border border-black/5`}>
+                          <Check className={`w-3.5 h-3.5 shrink-0 text-black`} />
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-black">{uc}</span>
                         </div>
                       ))}
                     </div>
@@ -379,23 +380,24 @@ export default function ComparePage() {
             </div>
 
             {/* ── CTA Footer ── */}
-            <div className="glass rounded-2xl border border-white/8 p-8">
-              <div className={`grid gap-6`} style={{ gridTemplateColumns: `repeat(${selectedProducts.length}, 1fr)` }}>
+            <div className="bg-[#FAFAFA] rounded-[2px] border border-black/5 p-12">
+              <div className={`grid gap-8`} style={{ gridTemplateColumns: `repeat(${selectedProducts.length}, 1fr)` }}>
                 {selectedProducts.map((p, i) => (
-                  <div key={p.id} className={`text-center p-6 rounded-xl border ${COL_BORDERS[i]} ${COL_BG[i]}`}>
-                    <p className={`font-orbitron font-black text-lg ${COL_TEXT[i]} mb-1`}>{p.name}</p>
-                    <p className={`font-orbitron font-bold text-3xl text-white mb-2`}>₱{p.price.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500 mb-5">{p.tagline}</p>
+                  <div key={p.id} className={`text-center p-8 bg-white border border-black/5 hover:border-black transition-colors hover:shadow-premium`}>
+                    <p className={`font-bold text-[11px] uppercase tracking-wider text-black mb-2`}>{p.name}</p>
+                    {!settings.hide_prices && (
+                      <p className={`font-bold text-3xl tracking-tighter text-black mb-3`}>₱{p.price.toLocaleString()}</p>
+                    )}
+                    <p className="text-[11px] font-medium text-[#707070] mb-8 line-clamp-2">{p.tagline}</p>
                     <button
                       onClick={() => handleRequestQuote(p.id)}
-                      className="w-full py-3 rounded-xl font-bold text-sm transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-                      style={{ background: ACCENT_COLORS[i], color: "#0A0A0A" }}
+                      className="w-full h-12 bg-black text-white text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-gray-800 flex items-center justify-center gap-2"
                     >
                       Request Quote <ArrowRight className="w-4 h-4" />
                     </button>
                     <Link
                       to={`/products/${p.id}`}
-                      className="flex items-center justify-center gap-1.5 mt-2.5 text-xs text-gray-500 hover:text-white transition-colors"
+                      className="flex items-center justify-center gap-1.5 mt-5 text-[10px] font-bold uppercase tracking-widest text-[#707070] hover:text-black transition-colors"
                     >
                       Full Details <ChevronRight className="w-3.5 h-3.5" />
                     </Link>
@@ -408,33 +410,32 @@ export default function ComparePage() {
         )}
 
         {/* Help Banner */}
-        <div className="mt-10 glass rounded-2xl border border-[#39FF14]/15 p-6 flex flex-col sm:flex-row items-center gap-5">
-          <div className="w-12 h-12 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center shrink-0">
-            <Info className="w-6 h-6 text-[#39FF14]" />
+        <div className="mt-16 bg-[#FAFAFA] border border-black/5 p-8 flex flex-col sm:flex-row items-center gap-6 shadow-sm hover:border-black transition-colors">
+          <div className="w-14 h-14 bg-white border border-black/10 flex items-center justify-center shrink-0">
+            <Info className="w-6 h-6 text-black" />
           </div>
           <div className="flex-1 text-center sm:text-left">
-            <p className="font-semibold text-white text-sm mb-1">Not sure which model fits you?</p>
-            <p className="text-xs text-gray-500">Our e-mobility specialists can help you choose the right bike for your needs, budget, and use case — completely free consultation.</p>
+            <p className="font-bold text-black text-[11px] uppercase tracking-wider mb-2">Not sure which model fits you?</p>
+            <p className="text-[#707070] font-medium text-[11px] leading-relaxed">Our e-mobility specialists can help you choose the right bike for your needs, budget, and use case — completely free consultation.</p>
           </div>
-          <Link to="/contact" className="btn-primary text-sm flex items-center gap-2 whitespace-nowrap">
+          <Link to="/contact" className="btn-primary h-12 px-8 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 whitespace-nowrap">
             Talk to an Expert <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </div>
 
       {/* Quote Modal */}
-      {quoteProduct && (
-        <QuoteModal
-          productName={quoteProduct}
-          onClose={() => setQuoteProduct(null)}
-        />
-      )}
-      {showAuth && (
-        <CustomerAuthModal
-          onClose={() => { setShowAuth(false); setPendingProduct(null); }}
-          onSuccess={handleAuthSuccess}
-        />
-      )}
+      <QuoteModal
+        open={!!quoteProduct}
+        preselectedProduct={quoteProduct || undefined}
+        onClose={() => setQuoteProduct(null)}
+      />
+      <CustomerAuthModal
+        open={showAuth}
+        onClose={() => { setShowAuth(false); setPendingProduct(null); }}
+        onSuccess={handleAuthSuccess}
+      />
     </div>
   );
 }
+

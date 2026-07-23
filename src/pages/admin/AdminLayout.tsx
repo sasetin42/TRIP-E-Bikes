@@ -9,6 +9,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { auth } from "@/lib/firebase";
 import NotificationBell from "@/components/features/NotificationBell";
 
 const NAV_ITEMS = [
@@ -78,6 +79,11 @@ export default function AdminLayout() {
   }, []);
 
   const handleLogout = async () => {
+    try {
+      await auth.signOut();
+    } catch (err) {
+      console.error("Failed to sign out from Firebase:", err);
+    }
     await supabase.auth.signOut();
     logout();
     navigate("/admin/login");

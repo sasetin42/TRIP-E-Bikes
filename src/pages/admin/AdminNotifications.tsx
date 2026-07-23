@@ -14,7 +14,7 @@ export default function AdminNotifications() {
         </button>
       </div>
 
-      <div className="glass rounded-xl border border-white/5 divide-y divide-white/5">
+      <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/5 divide-y divide-white/5">
         {[
           { type: "lead", title: "New Lead Registered", detail: "Juan Dela Cruz submitted a quote request for TRIP Model T-206 Max (3 units).", time: "3 minutes ago", icon: Zap, iconClass: "text-[#39FF14] bg-[#39FF14]/10" },
           { type: "appointment", title: "Test Ride Appointment Booked", detail: "Maria Santos scheduled a test ride on Tuesday, July 14 at 2:00 PM.", time: "1 hour ago", icon: Bell, iconClass: "text-blue-400 bg-blue-500/10" },
@@ -38,3 +38,4 @@ export default function AdminNotifications() {
     </div>
   );
 }
+

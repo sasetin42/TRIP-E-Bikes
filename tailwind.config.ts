@@ -18,14 +18,14 @@ export default {
     extend: {
       colors: {
         brand: {
-          green: "#39FF14",
-          lime: "#A8FF3E",
-          cyan: "#00FFFF",
-          black: "#0A0A0A",
-          carbon: "#111111",
-          graphite: "#1A1A1A",
-          gray: "#2A2A2A",
-          silver: "#C0C0C0",
+          green: "#39FF14", // Retaining the accent color for 5% highlights
+          black: "#000000",
+          charcoal: "#2C2C2C",
+          darkGray: "#707070",
+          mediumGray: "#D9D9D9",
+          lightGray: "#F2F2F2",
+          softWhite: "#FAFAFA",
+          white: "#FFFFFF",
         },
         border: "hsl(var(--border))",
         background: "hsl(var(--background))",
@@ -52,25 +52,34 @@ export default {
         },
       },
       fontFamily: {
-        orbitron: ["Orbitron", "monospace"],
+        // Replacing Orbitron with Inter as per the luxury B&W design spec
         inter: ["Inter", "sans-serif"],
+        sans: ["Inter", "sans-serif"],
       },
       backgroundImage: {
-        "hero-gradient": "radial-gradient(ellipse at 50% 0%, rgba(57,255,20,0.15) 0%, transparent 60%), radial-gradient(ellipse at 100% 50%, rgba(0,255,255,0.08) 0%, transparent 50%), linear-gradient(180deg, #0A0A0A 0%, #111111 100%)",
-        "card-gradient": "linear-gradient(135deg, rgba(57,255,20,0.05) 0%, rgba(0,255,255,0.03) 100%)",
-        "section-gradient": "linear-gradient(180deg, #0A0A0A 0%, #111827 50%, #0A0A0A 100%)",
+        "hero-gradient": "linear-gradient(180deg, #FAFAFA 0%, #FFFFFF 100%)",
+        "card-gradient": "linear-gradient(135deg, rgba(0,0,0,0.02) 0%, rgba(0,0,0,0.05) 100%)",
+        "section-gradient": "linear-gradient(180deg, #FFFFFF 0%, #FAFAFA 100%)",
       },
       animation: {
-        "fade-up": "fadeUp 0.8s ease forwards",
-        "glow-pulse": "glowPulse 3s ease-in-out infinite",
+        "fade-up": "fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "zoom-in": "zoomIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "float": "float 4s ease-in-out infinite",
-        "spin-slow": "spin-slow 20s linear infinite",
       },
       boxShadow: {
-        "neon-green": "0 0 20px rgba(57,255,20,0.4), 0 0 60px rgba(57,255,20,0.2)",
-        "neon-cyan": "0 0 20px rgba(0,255,255,0.4), 0 0 60px rgba(0,255,255,0.2)",
-        "glass": "0 8px 32px rgba(0,0,0,0.4)",
+        "glass": "0 8px 32px rgba(0,0,0,0.05)",
+        "premium": "0 10px 40px -10px rgba(0,0,0,0.08)",
       },
+      keyframes: {
+        fadeUp: {
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        zoomIn: {
+          "0%": { opacity: "0", transform: "scale(0.95)" },
+          "100%": { opacity: "1", transform: "scale(1)" },
+        },
+      }
     },
   },
   plugins: [require("tailwindcss-animate")],

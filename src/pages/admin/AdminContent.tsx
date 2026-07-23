@@ -1,11 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Plus, Edit, Trash2, Eye, EyeOff, Loader2, Save, X,
-  FileText, CheckCircle, Globe, Clock, User, ImageIcon, AlignLeft,
-  Upload, Image, Link as LinkIcon
-} from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { MapPin, Plus, Edit, Trash2, Eye, EyeOff, Loader2, Save, X, FileText, CheckCircle, Globe, Clock, User, ImageIcon, AlignLeft, Upload, Image, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { CustomSelect } from "@/components/ui/custom-select";
+import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import MediaSourceModal from "@/components/features/MediaSourceModal";
+
+interface FAQItem {
+  id: string;
+  q: string;
+  a: string;
+  category: string;
+  created_at?: any;
+}
 
 interface BlogPost {
   id: string;
@@ -25,10 +33,13 @@ interface BlogPost {
 const CATEGORIES = ["Industry News", "Battery Care", "Buying Guides", "Comparisons", "Rider Tips", "Sustainability", "Company News", "E-Bike Guides"];
 const CONTENT_TABS = ["Blog Posts", "FAQs", "Testimonials", "Banners"];
 const FAQS = [
-  { q: "What is the warranty on TRIP e-bikes?", a: "3-year frame, 1-year motor, 1-year battery.", category: "Warranty" },
-  { q: "Do you offer fleet discounts?", a: "Yes — up to 20% for orders of 10+ units.", category: "Pricing" },
-  { q: "How long does delivery take?", a: "Metro Manila: 2–3 days. Provincial: 5–7 days.", category: "Delivery" },
-  { q: "Can I test ride before buying?", a: "Yes, at our Mandaluyong City showroom.", category: "Showroom" },
+  { q: "What is an electric bike (ebike)?", a: "An electric bike, or ebike, is a bicycle that is powered by an electric motor and battery. The motor provides assistance to the rider, making it easier to pedal and allowing the bike to travel at higher speeds than a traditional bicycle.", category: "General" },
+  { q: "What are the benefits of owning an ebike?", a: "The benefits of owning an e-bike include increased mobility and range, reduced effort required to ride, improved fitness, lessens transportation costs, reduced environmental impact, and fit for fun and enjoyment.", category: "General" },
+  { q: "How fast can an ebike go?", a: "The top speed of an ebike is usually limited by law to 25-40km/h, depending on the country.", category: "Performance" },
+  { q: "How far can an ebike travel on a single charge?", a: "The distance an ebike can travel on a single charge depends on factors such as the battery capacity, the level of pedal assist used, the terrain, and the rider's weight. Generally, a TRIP ebike can travel between 50-80 km on a single charge.", category: "Battery" },
+  { q: "What kind of batteries are used in ebikes, and how long do they last?", a: "Most ebikes use lithium ion batteries, which are lightweight and have a high energy density. The lifespan of a battery depends on how it is used and maintained, but most ebike batteries can last for several years before needing to be replaced.", category: "Battery" },
+  { q: "Are ebikes legal to ride on public roads and bike paths?", a: "In general, most places allow ebikes that meet certain criteria (such as limited speed and power output) to be ridden on public roads and bike paths.", category: "Legal" },
+  { q: "What kind of maintenance does an ebike require?", a: "Ebikes require similar maintenance to traditional bicycles, such as keeping the tires inflated, keeping the chain lubricated, and checking the brakes regularly. Additionally, the battery should be charged and stored properly, and the motor and electrical components should be inspected periodically.", category: "Maintenance" }
 ];
 
 const emptyForm = {
@@ -47,6 +58,41 @@ type PostForm = typeof emptyForm;
 const inputCls = "w-full border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-[#39FF14]/50 transition-all";
 const INPUT_DARK = { style: { background: "#1A1A1A" } };
 
+const convertToWebP = (file: File): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Failed to get canvas 2d context"));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("WebP conversion failed"));
+            }
+          },
+          "image/webp",
+          0.85
+        );
+      };
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.src = event.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function AdminContent() {
   const [activeTab, setActiveTab] = useState("Blog Posts");
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -57,11 +103,115 @@ export default function AdminContent() {
   const [form, setForm] = useState<PostForm>({ ...emptyForm });
   const [previewPost, setPreviewPost] = useState<BlogPost | null>(null);
   const [imageMode, setImageMode] = useState<"url" | "upload">("url");
+  const [mediaModalOpen, setMediaModalOpen] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
+
+  // FAQ Live States
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
+  const [loadingFaqs, setLoadingFaqs] = useState(true);
+  const [showFaqEditor, setShowFaqEditor] = useState(false);
+  const [editingFaq, setEditingFaq] = useState<FAQItem | null>(null);
+  const [faqForm, setFaqForm] = useState({ q: "", a: "", category: "General" });
+
+  useEffect(() => {
+    if (activeTab !== "FAQs") return;
+    setLoadingFaqs(true);
+    const qRef = query(collection(db, "faqs"), orderBy("category", "asc"));
+    const unsubscribe = onSnapshot(
+      qRef,
+      async (snapshot) => {
+        if (snapshot.empty || snapshot.size < 5) {
+          // Clear current FAQs and seed new ones
+          try {
+            for (const d of snapshot.docs) {
+              await deleteDoc(doc(db, "faqs", d.id));
+            }
+            for (const item of FAQS) {
+              await addDoc(collection(db, "faqs"), {
+                q: item.q,
+                a: item.a,
+                category: item.category,
+                created_at: serverTimestamp()
+              });
+            }
+          } catch (seedErr) {
+            console.error("Failed to seed initial FAQs:", seedErr);
+          }
+          return;
+        }
+        const list: FAQItem[] = [];
+        snapshot.forEach((doc) => {
+          list.push({ id: doc.id, ...doc.data() } as FAQItem);
+        });
+        setFaqs(list);
+        setLoadingFaqs(false);
+      },
+      (err) => {
+        console.error("Error fetching FAQs:", err);
+        toast.error("Failed to load FAQs: " + err.message);
+        setLoadingFaqs(false);
+      }
+    );
+    return () => unsubscribe();
+  }, [activeTab]);
+
+  const handleSaveFaq = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!faqForm.q.trim() || !faqForm.a.trim()) {
+      toast.error("Question and Answer are required.");
+      return;
+    }
+    try {
+      if (editingFaq) {
+        const faqRef = doc(db, "faqs", editingFaq.id);
+        await updateDoc(faqRef, {
+          q: faqForm.q.trim(),
+          a: faqForm.a.trim(),
+          category: faqForm.category
+        });
+        toast.success("FAQ updated successfully.");
+      } else {
+        await addDoc(collection(db, "faqs"), {
+          q: faqForm.q.trim(),
+          a: faqForm.a.trim(),
+          category: faqForm.category,
+          created_at: serverTimestamp()
+        });
+        toast.success("FAQ added successfully.");
+      }
+      setShowFaqEditor(false);
+      setEditingFaq(null);
+      setFaqForm({ q: "", a: "", category: "General" });
+    } catch (err: any) {
+      toast.error("Failed to save FAQ: " + err.message);
+    }
+  };
+
+  const handleDeleteFaq = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this FAQ?")) return;
+    try {
+      await deleteDoc(doc(db, "faqs", id));
+      toast.success("FAQ deleted successfully.");
+    } catch (err: any) {
+      toast.error("Failed to delete FAQ: " + err.message);
+    }
+  };
+
+  const openNewFaqEditor = () => {
+    setEditingFaq(null);
+    setFaqForm({ q: "", a: "", category: "General" });
+    setShowFaqEditor(true);
+  };
+
+  const openEditFaqEditor = (faq: FAQItem) => {
+    setEditingFaq(faq);
+    setFaqForm({ q: faq.q, a: faq.a, category: faq.category });
+    setShowFaqEditor(true);
+  };
 
   const fetchPosts = useCallback(async () => {
     setLoading(true);
@@ -105,8 +255,20 @@ export default function AdminContent() {
     // Simulate progress
     const progressInterval = setInterval(() => setUploadProgress(p => Math.min(p + 10, 85)), 200);
 
+    let fileToUpload: File | Blob = file;
+    let uploadFilename = file.name;
+
+    try {
+      const webpBlob = await convertToWebP(file);
+      fileToUpload = webpBlob;
+      const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+      uploadFilename = `${baseName}.webp`;
+    } catch (optimizeErr) {
+      console.warn("Failed to optimize blog image, uploading original:", optimizeErr);
+    }
+
     const formData = new FormData();
-    formData.append("image", file);
+    formData.append("image", fileToUpload, uploadFilename);
     const { data, error } = await apiClient.post("/upload.php", formData);
 
     clearInterval(progressInterval);
@@ -217,7 +379,7 @@ export default function AdminContent() {
           ) : (
             <div className="space-y-3">
               {posts.map(post => (
-                <div key={post.id} className="glass rounded-xl border border-white/5 hover:border-white/10 transition-all flex gap-4 p-4 items-center">
+                <div key={post.id} className="bg-white/5 backdrop-blur-md rounded-xl border border-white/5 hover:border-white/10 transition-all flex gap-4 p-4 items-center">
                   <img src={post.image_url || "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=120&q=60"} alt={post.title} className="w-20 h-16 object-cover rounded-lg shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -232,10 +394,10 @@ export default function AdminContent() {
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => setPreviewPost(post)} className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-[#39FF14] transition-colors" title="Preview"><Eye className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleTogglePublish(post)} className={`p-2 glass rounded-lg border transition-colors ${post.published ? "border-yellow-500/30 text-yellow-400 hover:text-yellow-300" : "border-green-500/30 text-green-400 hover:text-green-300"}`} title={post.published ? "Unpublish" : "Publish"}>{post.published ? <EyeOff className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}</button>
-                    <button onClick={() => openEditEditor(post)} className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleDelete(post.id)} className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-red-400 transition-colors" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => setPreviewPost(post)} className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-[#39FF14] transition-colors" title="Preview"><Eye className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleTogglePublish(post)} className={`p-2 bg-white/5 backdrop-blur-md rounded-lg border transition-colors ${post.published ? "border-yellow-500/30 text-yellow-400 hover:text-yellow-300" : "border-green-500/30 text-green-400 hover:text-green-300"}`} title={post.published ? "Unpublish" : "Publish"}>{post.published ? <EyeOff className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}</button>
+                    <button onClick={() => openEditEditor(post)} className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => handleDelete(post.id)} className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-red-400 transition-colors" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                 </div>
               ))}
@@ -244,35 +406,69 @@ export default function AdminContent() {
         </div>
       )}
 
-      {/* FAQs, Testimonials, Banners — unchanged */}
       {activeTab === "FAQs" && (
         <div className="space-y-3">
-          <div className="flex justify-end mb-4"><button className="btn-outline text-xs flex items-center gap-2"><Plus className="w-3 h-3" /> Add FAQ</button></div>
-          {FAQS.map((faq, i) => (
-            <div key={i} className="glass rounded-xl border border-white/5 p-5 flex items-start justify-between gap-4">
-              <div>
-                <span className="px-2 py-0.5 text-xs bg-white/10 text-gray-400 rounded-full mr-2">{faq.category}</span>
-                <p className="font-semibold text-white mt-2">{faq.q}</p>
-                <p className="text-gray-400 text-sm mt-1">{faq.a}</p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"><Edit className="w-3.5 h-3.5" /></button>
-                <button className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
-              </div>
+          <div className="flex justify-end mb-4">
+            <button 
+              onClick={openNewFaqEditor}
+              className="btn-outline text-xs flex items-center gap-2 border-[#39FF14]/30 text-white hover:bg-[#39FF14]/10 hover:border-[#39FF14]/50"
+            >
+              <Plus className="w-3.5 h-3.5 text-[#39FF14]" /> Add FAQ
+            </button>
+          </div>
+
+          {loadingFaqs ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" />
             </div>
-          ))}
+          ) : faqs.length === 0 ? (
+            <div className="text-center py-16 bg-white/5 backdrop-blur-md rounded-xl border border-white/5">
+              <FileText className="w-12 h-12 text-gray-700 mx-auto mb-4" />
+              <p className="text-gray-500">No FAQ entries available. Create the first one!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {faqs.map((faq) => (
+                <div key={faq.id} className="bg-white/5 backdrop-blur-md rounded-xl border border-white/5 p-5 flex items-start justify-between gap-4 hover:border-white/10 transition-colors">
+                  <div>
+                    <span className="px-2.5 py-0.5 text-xs bg-[#39FF14]/10 border border-[#39FF14]/20 text-[#39FF14] rounded-full uppercase tracking-wider font-semibold mr-2">
+                      {faq.category}
+                    </span>
+                    <p className="font-semibold text-white mt-3 text-sm">{faq.q}</p>
+                    <p className="text-gray-400 text-xs mt-1.5 leading-relaxed">{faq.a}</p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button 
+                      onClick={() => openEditFaqEditor(faq)}
+                      className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"
+                      title="Edit"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteFaq(faq.id)}
+                      className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-red-400 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
       {activeTab === "Testimonials" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {["Ramon Estrada – Fleet Manager, QuickBites", "Carla Villanueva – IslaResort Palawan", "Bernardo Reyes – QC Local Government", "Jennie Ocampo – Daily Commuter"].map((item, i) => (
-            <div key={i} className="glass rounded-xl border border-white/5 p-5 flex items-center justify-between">
+            <div key={i} className="bg-white/5 backdrop-blur-md rounded-xl border border-white/5 p-5 flex items-center justify-between">
               <div>
                 <p className="font-semibold text-white text-sm">{item.split(" – ")[0]}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{item.split(" – ")[1]}</p>
                 <div className="flex mt-2">{Array.from({ length: 5 }).map((_, j) => <span key={j} className="text-[#39FF14] text-xs">★</span>)}</div>
               </div>
-              <button className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"><Edit className="w-3.5 h-3.5" /></button>
+              <button className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"><Edit className="w-3.5 h-3.5" /></button>
             </div>
           ))}
         </div>
@@ -280,14 +476,14 @@ export default function AdminContent() {
       {activeTab === "Banners" && (
         <div className="space-y-4">
           {["Homepage Hero Banner", "Products Page Banner", "Financing Promo Banner"].map((banner, i) => (
-            <div key={i} className="glass rounded-xl border border-white/5 p-5 flex items-center justify-between">
+            <div key={i} className="bg-white/5 backdrop-blur-md rounded-xl border border-white/5 p-5 flex items-center justify-between">
               <div>
                 <p className="font-semibold text-white text-sm">{banner}</p>
                 <p className="text-xs text-gray-500 mt-0.5">Last updated: July 2026</p>
               </div>
               <div className="flex gap-2">
                 <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">Active</span>
-                <button className="p-2 glass rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"><Edit className="w-3.5 h-3.5" /></button>
+                <button className="p-2 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"><Edit className="w-3.5 h-3.5" /></button>
               </div>
             </div>
           ))}
@@ -297,10 +493,11 @@ export default function AdminContent() {
       {/* ── BLOG EDITOR MODAL ── */}
       {showEditor && (
         <div className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto bg-black/90 backdrop-blur-md p-4 pt-8">
-          <div className="relative w-full max-w-4xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "#0D0D0D" }}>
-            <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#39FF14] to-[#00FFFF]" />
+          <div className="neon-trail-border-container p-[2px] rounded-2xl w-full max-w-4xl shadow-2xl relative z-10">
+            <div className="rounded-[14px] bg-[#0D0D0D] overflow-hidden">
+              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#39FF14] to-[#00FFFF]" />
 
-            <div className="flex items-center justify-between px-8 py-5 border-b border-white/8">
+            <div className="flex items-center justify-between px-8 py-3.5 border-b border-white/8">
               <div>
                 <h2 className="font-orbitron font-bold text-xl text-white">{editingPost ? "Edit Post" : "New Blog Post"}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">Fill in all fields and publish when ready</p>
@@ -312,31 +509,34 @@ export default function AdminContent() {
               {/* Title + Slug */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="sm:col-span-2">
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium">Post Title <span className="text-[#39FF14]">*</span></label>
-                  <input value={form.title} onChange={e => handleTitleChange(e.target.value)} placeholder="e.g. Best E-Bikes for Delivery Riders in 2026" className={inputCls} {...INPUT_DARK} />
+                  <label htmlFor="post-title" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium">Post Title <span className="text-[#39FF14]">*</span></label>
+                  <input id="post-title" name="title" value={form.title} onChange={e => handleTitleChange(e.target.value)} placeholder="e.g. Best E-Bikes for Delivery Riders in 2026" className={inputCls} {...INPUT_DARK} />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium">URL Slug <span className="text-[#39FF14]">*</span></label>
-                  <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} placeholder="best-e-bikes-delivery-riders-2026" className={inputCls + " font-mono"} {...INPUT_DARK} />
+                  <label htmlFor="post-slug" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium">URL Slug <span className="text-[#39FF14]">*</span></label>
+                  <input id="post-slug" name="slug" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} placeholder="best-e-bikes-delivery-riders-2026" className={inputCls + " font-mono"} {...INPUT_DARK} />
                   <p className="text-xs text-gray-600 mt-1">tripmobility.ph/blog/{form.slug || "..."}</p>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium">Category</label>
-                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className={inputCls} style={{ background: "#1A1A1A" }}>
-                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                  </select>
+                  <CustomSelect
+                    value={form.category}
+                    onChange={(v) => setForm((f) => ({ ...f, category: v }))}
+                    options={CATEGORIES.map((c) => ({ value: c, label: c }))}
+                    size="md"
+                  />
                 </div>
               </div>
 
               {/* Author + Read Time */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium flex items-center gap-1.5"><User className="w-3 h-3" />Author</label>
-                  <input value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="TRIP Mobility Team" className={inputCls} {...INPUT_DARK} />
+                  <label htmlFor="post-author" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium flex items-center gap-1.5"><User className="w-3 h-3" />Author</label>
+                  <input id="post-author" name="author" value={form.author} onChange={e => setForm(f => ({ ...f, author: e.target.value }))} placeholder="TRIP Mobility Team" className={inputCls} {...INPUT_DARK} />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium flex items-center gap-1.5"><Clock className="w-3 h-3" />Read Time (minutes)</label>
-                  <input type="number" min={1} max={60} value={form.read_time} onChange={e => setForm(f => ({ ...f, read_time: parseInt(e.target.value) || 5 }))} className={inputCls} {...INPUT_DARK} />
+                  <label htmlFor="post-read-time" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium flex items-center gap-1.5"><Clock className="w-3 h-3" />Read Time (minutes)</label>
+                  <input type="number" id="post-read-time" name="read_time" min={1} max={60} value={form.read_time} onChange={e => setForm(f => ({ ...f, read_time: parseInt(e.target.value) || 5 }))} className={inputCls} {...INPUT_DARK} />
                 </div>
               </div>
 
@@ -344,7 +544,7 @@ export default function AdminContent() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-xs text-gray-400 uppercase tracking-widest font-medium flex items-center gap-1.5"><ImageIcon className="w-3 h-3" />Cover Image</label>
-                  <div className="flex gap-1 glass rounded-lg border border-white/10 p-1">
+                  <div className="flex gap-1 bg-white/5 backdrop-blur-md rounded-lg border border-white/10 p-1">
                     <button onClick={() => setImageMode("upload")} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${imageMode === "upload" ? "bg-[#39FF14]/20 text-[#39FF14]" : "text-gray-500 hover:text-white"}`}>
                       <Upload className="w-3 h-3" />Upload
                     </button>
@@ -356,58 +556,40 @@ export default function AdminContent() {
 
                 {imageMode === "upload" ? (
                   <div>
-                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0])} />
-
                     {form.image_url ? (
                       /* Image already uploaded */
                       <div className="relative rounded-xl overflow-hidden h-40 border border-[#39FF14]/30 group">
                         <img src={form.image_url} alt="Cover" className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center gap-3">
-                          <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-[#39FF14] text-[#0A0A0A] rounded-lg text-xs font-bold">Replace Image</button>
-                          <button onClick={() => setForm(f => ({ ...f, image_url: "" }))} className="px-4 py-2 bg-red-500/80 text-white rounded-lg text-xs font-bold">Remove</button>
+                          <button type="button" onClick={() => setMediaModalOpen(true)} className="px-4 py-2 bg-[#39FF14] text-[#0A0A0A] rounded-lg text-xs font-bold">Replace Image</button>
+                          <button type="button" onClick={() => setForm(f => ({ ...f, image_url: "" }))} className="px-4 py-2 bg-red-500/80 text-white rounded-lg text-xs font-bold">Remove</button>
                         </div>
                         <div className="absolute top-3 left-3 px-2 py-1 bg-[#39FF14] text-[#0A0A0A] text-[10px] font-bold rounded-full flex items-center gap-1">
                           <CheckCircle className="w-3 h-3" />Uploaded
                         </div>
                       </div>
                     ) : (
-                      /* Drop Zone */
-                      <div ref={dropZoneRef} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
-                        onClick={() => !uploadingImage && fileInputRef.current?.click()}
-                        className={`relative cursor-pointer rounded-xl border-2 border-dashed transition-all h-40 flex flex-col items-center justify-center gap-3 ${isDragging ? "border-[#39FF14] bg-[#39FF14]/8" : "border-white/20 hover:border-[#39FF14]/50 hover:bg-white/2"}`}>
-                        {uploadingImage ? (
-                          <div className="flex flex-col items-center gap-3 w-full px-8">
-                            <Loader2 className="w-8 h-8 text-[#39FF14] animate-spin" />
-                            <div className="w-full">
-                              <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                <span>Uploading...</span>
-                                <span>{uploadProgress}%</span>
-                              </div>
-                              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-[#39FF14] to-[#00FFFF] rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <div className={`w-14 h-14 rounded-xl flex items-center justify-center border ${isDragging ? "border-[#39FF14]/40 bg-[#39FF14]/10" : "border-white/10 bg-white/5"}`}>
-                              <Upload className={`w-6 h-6 ${isDragging ? "text-[#39FF14]" : "text-gray-400"}`} />
-                            </div>
-                            <div className="text-center">
-                              <p className={`text-sm font-semibold ${isDragging ? "text-[#39FF14]" : "text-gray-300"}`}>
-                                {isDragging ? "Drop image here" : "Drag & drop or click to upload"}
-                              </p>
-                              <p className="text-xs text-gray-600 mt-1">JPG, PNG, WebP, GIF · Max 10MB</p>
-                            </div>
-                          </>
-                        )}
+                      /* Drop Zone / Media Picker Trigger */
+                      <div 
+                        onClick={() => setMediaModalOpen(true)}
+                        className="relative cursor-pointer rounded-xl border-2 border-dashed border-white/20 hover:border-[#39FF14]/50 hover:bg-white/2 transition-all h-40 flex flex-col items-center justify-center gap-3"
+                      >
+                        <div className="w-14 h-14 rounded-xl flex items-center justify-center border border-white/10 bg-white/5">
+                          <Upload className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-semibold text-gray-300">
+                            Click to select cover image
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">Select from media sources</p>
+                        </div>
                       </div>
                     )}
                   </div>
                 ) : (
                   /* URL Mode */
                   <div>
-                    <input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://images.unsplash.com/photo-..." className={inputCls + " font-mono"} {...INPUT_DARK} />
+                    <input id="post-image-url" name="image_url" value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="https://images.unsplash.com/photo-..." className={inputCls + " font-mono"} {...INPUT_DARK} />
                     {form.image_url && (
                       <div className="mt-2 rounded-xl overflow-hidden h-24 border border-white/10 relative">
                         <img src={form.image_url} alt="Preview" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -419,14 +601,14 @@ export default function AdminContent() {
 
               {/* Excerpt */}
               <div>
-                <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium flex items-center gap-1.5"><AlignLeft className="w-3 h-3" />Excerpt / Summary</label>
-                <textarea value={form.excerpt} onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))} placeholder="A 2–3 sentence summary that appears in article cards..." rows={3} className={inputCls + " resize-none"} {...INPUT_DARK} />
+                <label htmlFor="post-excerpt" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium flex items-center gap-1.5"><AlignLeft className="w-3 h-3" />Excerpt / Summary</label>
+                <textarea id="post-excerpt" name="excerpt" value={form.excerpt} onChange={e => setForm(f => ({ ...f, excerpt: e.target.value }))} placeholder="A 2–3 sentence summary that appears in article cards..." rows={3} className={inputCls + " resize-none"} {...INPUT_DARK} />
               </div>
 
               {/* Body */}
               <div>
-                <label className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium">Article Body</label>
-                <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="Write your full article here..." rows={14} className={inputCls + " font-mono leading-relaxed resize-y"} style={{ background: "#1A1A1A", minHeight: "280px" }} />
+                <label htmlFor="post-body" className="block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium">Article Body</label>
+                <textarea id="post-body" name="body" value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))} placeholder="Write your full article here..." rows={14} className={inputCls + " font-mono leading-relaxed resize-y"} style={{ background: "#1A1A1A", minHeight: "280px" }} />
                 <p className="text-xs text-gray-600 mt-1">{form.body.split(" ").filter(Boolean).length} words · ~{Math.ceil(form.body.split(" ").filter(Boolean).length / 200)} min read</p>
               </div>
 
@@ -452,6 +634,7 @@ export default function AdminContent() {
                 <Globe className="w-4 h-4" />{saving ? "Publishing..." : "Publish Now"}
               </button>
             </div>
+            </div>
           </div>
         </div>
       )}
@@ -459,9 +642,10 @@ export default function AdminContent() {
       {/* Post Preview Modal */}
       {previewPost && (
         <div className="fixed inset-0 z-[250] flex items-start justify-center overflow-y-auto bg-black/90 backdrop-blur-md p-4 pt-8">
-          <div className="relative w-full max-w-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden" style={{ background: "#0D0D0D" }}>
-            <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#39FF14] to-[#00FFFF]" />
-            <div className="flex items-center justify-between p-5 border-b border-white/8">
+          <div className="neon-trail-border-container p-[2px] rounded-2xl w-full max-w-2xl shadow-2xl relative z-10">
+            <div className="rounded-[14px] bg-[#0D0D0D] overflow-hidden">
+              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#39FF14] to-[#00FFFF]" />
+            <div className="flex items-center justify-between px-6 py-3.5 border-b border-white/8">
               <span className="text-xs text-[#39FF14] font-semibold tracking-widest uppercase">Preview</span>
               <button onClick={() => setPreviewPost(null)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/10 text-gray-500 hover:text-white transition-all"><X className="w-4 h-4" /></button>
             </div>
@@ -476,9 +660,102 @@ export default function AdminContent() {
               </div>
               <p className="text-gray-400 text-sm leading-relaxed line-clamp-6">{previewPost.body}</p>
             </div>
+            </div>
           </div>
         </div>
       )}
+      {/* ── FAQ EDITOR MODAL ── */}
+      {showFaqEditor && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+          <div className="neon-trail-border-container p-[2px] rounded-2xl w-full max-w-lg shadow-2xl relative z-10">
+            <div className="rounded-[14px] bg-[#0D0D0D] overflow-hidden">
+              <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-[#39FF14] to-[#00FFFF]" />
+              
+              <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+                <h3 className="font-orbitron font-bold text-white text-base">
+                  {editingFaq ? "Edit FAQ" : "Add New FAQ"}
+                </h3>
+                <button 
+                  onClick={() => { setShowFaqEditor(false); setEditingFaq(null); }}
+                  className="p-1 text-gray-500 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveFaq} className="p-6 space-y-4">
+                <div>
+                  <label className="block text-xs text-gray-400 font-semibold mb-1.5">Question *</label>
+                  <input
+                    required
+                    type="text"
+                    value={faqForm.q}
+                    onChange={(e) => setFaqForm({ ...faqForm, q: e.target.value })}
+                    placeholder="e.g. What is the battery capacity?"
+                    className={inputCls}
+                    {...INPUT_DARK}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-400 font-semibold mb-1.5">Category *</label>
+                  <select
+                    value={faqForm.category}
+                    onChange={(e) => setFaqForm({ ...faqForm, category: e.target.value })}
+                    className={inputCls}
+                    style={{ background: "#1A1A1A" }}
+                  >
+                    {["General", "Performance", "Battery", "Legal", "Maintenance", "Warranty", "Pricing", "Delivery", "Showroom", "Specs", "Support"].map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-400 font-semibold mb-1.5">Answer *</label>
+                  <textarea
+                    required
+                    value={faqForm.a}
+                    onChange={(e) => setFaqForm({ ...faqForm, a: e.target.value })}
+                    placeholder="Provide a clear, detailed answer..."
+                    rows={4}
+                    className={`${inputCls} resize-none`}
+                    {...INPUT_DARK}
+                  />
+                </div>
+
+                <div className="flex gap-3 justify-end pt-2 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => { setShowFaqEditor(false); setEditingFaq(null); }}
+                    className="btn-outline text-xs px-4 py-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary text-xs px-4 py-2 flex items-center gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Save FAQ
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Media source modal overlay */}
+      <MediaSourceModal
+        isOpen={mediaModalOpen}
+        onClose={() => setMediaModalOpen(false)}
+        onSelect={(urls) => {
+          setForm(f => ({ ...f, image_url: urls[0] }));
+          setMediaModalOpen(false);
+        }}
+        multiple={false}
+      />
     </div>
   );
 }
+

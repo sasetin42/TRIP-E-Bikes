@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
+import { CustomSelect } from "@/components/ui/custom-select";
 
 interface ContactMessage {
   id: string;
@@ -182,7 +183,7 @@ export default function AdminContacts() {
         <button
           onClick={fetchMessages}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all"
+          className="flex items-center gap-2 px-4 py-2.5 bg-white/5 backdrop-blur-md rounded-xl border border-white/10 text-gray-400 hover:text-white text-xs font-semibold transition-all"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
           Refresh
@@ -198,7 +199,7 @@ export default function AdminContacts() {
             <button
               key={s}
               onClick={() => setFilterStatus(filterStatus === s ? "all" : s)}
-              className={`glass rounded-xl p-5 border text-left transition-all ${filterStatus === s ? `${cfg.border} ${cfg.bg}` : "border-white/5 hover:border-white/10"}`}
+              className={`bg-white/5 backdrop-blur-md rounded-xl p-5 border text-left transition-all ${filterStatus === s ? `${cfg.border} ${cfg.bg}` : "border-white/5 hover:border-white/10"}`}
             >
               <div className="flex items-center gap-2 mb-1">
                 <StatusIcon className={`w-4 h-4 ${cfg.color}`} />
@@ -216,32 +217,34 @@ export default function AdminContacts() {
           <Search className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            id="admin-contacts-search"
+            name="search"
             placeholder="Search by name, email, or message..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#39FF14]/30 transition-all"
           />
         </div>
-        <select
+        <CustomSelect
           value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="bg-[#111] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#39FF14]/30"
-        >
-          <option value="all">All Inquiry Types</option>
-          {inquiryTypes.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-        <select
+          onChange={setFilterType}
+          options={[
+            { value: "all", label: "All Inquiry Types" },
+            ...inquiryTypes.map((t) => ({ value: t, label: t }))
+          ]}
+          size="sm"
+          className="w-56"
+        />
+        <CustomSelect
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-[#111] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#39FF14]/30"
-        >
-          <option value="all">All Statuses</option>
-          {STATUS_ORDER.map((s) => (
-            <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
-          ))}
-        </select>
+          onChange={setFilterStatus}
+          options={[
+            { value: "all", label: "All Statuses" },
+            ...STATUS_ORDER.map((s) => ({ value: s, label: STATUS_CONFIG[s].label }))
+          ]}
+          size="sm"
+          className="w-48"
+        />
       </div>
 
       {/* Content */}
@@ -258,11 +261,11 @@ export default function AdminContacts() {
       ) : (
         /* Bulk Actions Bar */
         selectedIds.size > 0 && (
-          <div className="flex items-center gap-3 mb-4 px-4 py-3 glass rounded-xl border border-[#39FF14]/20 bg-[#39FF14]/5">
+          <div className="flex items-center gap-3 mb-4 px-4 py-3 bg-white/5 backdrop-blur-md rounded-xl border border-[#39FF14]/20 bg-[#39FF14]/5">
             <p className="text-sm text-[#39FF14] font-semibold">{selectedIds.size} selected</p>
             <div className="flex gap-2 ml-auto">
               {[{a:"read",l:"Mark Read"},{a:"replied",l:"Mark Replied"},{a:"unread",l:"Mark Unread"}].map(({a,l}) => (
-                <button key={a} onClick={() => handleBulkAction(a)} className="px-3 py-1.5 text-xs font-semibold glass rounded-lg border border-white/15 text-gray-300 hover:text-white transition-all">{l}</button>
+                <button key={a} onClick={() => handleBulkAction(a)} className="px-3 py-1.5 text-xs font-semibold bg-white/5 backdrop-blur-md rounded-lg border border-white/15 text-gray-300 hover:text-white transition-all">{l}</button>
               ))}
               <button onClick={() => setSelectedIds(new Set())} className="p-1.5 text-gray-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
             </div>
@@ -292,7 +295,7 @@ export default function AdminContacts() {
                     if (!isSelected && msg.status === "unread") updateStatus(msg.id, "read");
                   }}
                   onContextMenu={e => { e.preventDefault(); toggleSelect(msg.id); }}
-                  className={`glass rounded-xl border p-5 cursor-pointer transition-all ${
+                  className={`bg-white/5 backdrop-blur-md rounded-xl border p-5 cursor-pointer transition-all ${
                     isSelected ? "border-[#39FF14]/30 bg-[#39FF14]/3" : "border-white/5 hover:border-white/10"
                   } ${msg.status === "unread" ? "border-l-2 border-l-yellow-500/60" : ""}`}
                 >
@@ -340,7 +343,7 @@ export default function AdminContacts() {
             const nextStatuses = STATUS_ORDER.filter((s) => s !== selected.status);
 
             return (
-              <div className="glass rounded-xl border border-white/8 overflow-hidden h-fit sticky top-24">
+              <div className="bg-white/5 backdrop-blur-md rounded-xl border border-white/8 overflow-hidden h-fit sticky top-24">
                 {/* Panel header */}
                 <div className="px-5 py-4 border-b border-white/5 bg-white/2 flex items-center justify-between">
                   <p className="font-semibold text-white text-sm">Message Detail</p>
@@ -435,3 +438,4 @@ export default function AdminContacts() {
     </div>
   );
 }
+

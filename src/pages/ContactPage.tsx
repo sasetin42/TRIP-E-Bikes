@@ -1,20 +1,20 @@
 import { useState, useEffect } from "react";
-import { MapPin, Phone, Mail, Clock, Send, CheckCircle, Navigation, ExternalLink } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Send, CheckCircle, Navigation, ExternalLink, ChevronDown, MessageSquare, Info, FileText, Truck, Wrench, Briefcase, Newspaper, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import SectionObserver from "@/components/features/SectionObserver";
 import ParticleField from "@/components/features/ParticleField";
 import { apiClient } from "@/lib/api-client";
 import { trackContactFormSubmit, trackCTAClick, trackPageView } from "@/hooks/useTracking";
 
-const INQUIRY_TYPES = [
-  "General Inquiry",
-  "Product Information",
-  "Quote Request",
-  "Fleet Solutions",
-  "Service & Warranty",
-  "Partnership / Dealership",
-  "Media & Press",
-  "Careers",
+const INQUIRY_OPTIONS = [
+  { value: "General Inquiry", label: "General Inquiry", icon: MessageSquare },
+  { value: "Product Information", label: "Product Information", icon: Info },
+  { value: "Quote Request", label: "Quote Request", icon: FileText },
+  { value: "Fleet Solutions", label: "Fleet Solutions", icon: Truck },
+  { value: "Service & Warranty", label: "Service & Warranty", icon: Wrench },
+  { value: "Partnership / Dealership", label: "Partnership / Dealership", icon: Briefcase },
+  { value: "Media & Press", label: "Media & Press", icon: Newspaper },
+  { value: "Careers", label: "Careers", icon: GraduationCap },
 ];
 
 const SERVICE_CENTERS = [
@@ -79,8 +79,21 @@ export default function ContactPage() {
     message: "",
   });
 
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   useEffect(() => {
     trackPageView("/contact", "Contact Us — TRIP Mobility");
+  }, []);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".custom-dropdown-container")) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,11 +123,11 @@ export default function ContactPage() {
     toast.success("Message sent! We will respond within 24 hours.");
   };
 
-  const inputCls = "w-full bg-white/4 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder-gray-600 focus:outline-none focus:border-[#39FF14]/50 focus:bg-[#39FF14]/3 transition-all text-sm";
-  const labelCls = "block text-xs text-gray-400 mb-2 uppercase tracking-widest font-medium";
+  const inputCls = "w-full bg-white border border-black/10 rounded-[2px] px-4 py-3 text-black placeholder-[#707070] font-medium focus:outline-none focus:border-black transition-all text-[11px] uppercase tracking-wider";
+  const labelCls = "block text-[10px] text-black mb-2 uppercase tracking-widest font-bold";
 
   return (
-    <div className="bg-[#0A0A0A] min-h-screen">
+    <div className="bg-white min-h-screen text-black">
       {/* BreadcrumbList Schema */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
@@ -126,39 +139,38 @@ export default function ContactPage() {
       })}} />
 
       {/* Hero */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
+      <section className="relative pt-24 pb-12 overflow-hidden bg-[#FAFAFA]">
         <ParticleField />
-        <div className="absolute inset-0 bg-hero-gradient" />
-        <div className="relative max-w-7xl mx-auto px-6 text-center">
-          <p className="section-label mb-4">Get in Touch</p>
-          <h1 className="font-orbitron font-black text-5xl sm:text-6xl text-white mb-6">
-            Talk to an <span className="gradient-text">Expert</span>
+        <div className="relative max-w-5xl mx-auto px-6 text-center">
+          <p className="text-[10px] font-bold text-[#707070] uppercase tracking-[0.3em] mb-4">Get in Touch</p>
+          <h1 className="text-[35px] font-bold text-black mb-6 uppercase tracking-tight">
+            Contact Specialist
           </h1>
-          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
-            Our e-mobility specialists are ready to help you find the perfect TRIP solution for your needs.
+          <p className="text-[#707070] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+            Our technical support and logistics fleet coordinators are standing by to configure your proposal.
           </p>
         </div>
       </section>
 
       {/* Quick Contact Bar */}
-      <div className="bg-[#0D0D0D] border-y border-white/5 py-5">
+      <div className="bg-white border-y border-black/5 py-8">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { icon: Phone, label: "Call Us", value: "+63 2 8123 4567", href: "tel:+6328123456", action: "Call Now" },
-              { icon: Mail, label: "Email Us", value: "sales@tripmobility.ph", href: "mailto:sales@tripmobility.ph", action: "Send Email" },
-              { icon: Clock, label: "Business Hours", value: "Mon–Sat: 8AM – 6PM", href: null, action: null },
+              { icon: Phone, label: "Phone / Viber / WhatsApp", value: "0917 122 8212 / 0917 169 2711", href: "tel:09171228212" },
+              { icon: Mail, label: "Email Address", value: "gobindra@ggii.com.ph", href: "mailto:gobindra@ggii.com.ph" },
+              { icon: MapPin, label: "Store Location", value: "105 Maryland Street, Cubao, QC", href: "https://maps.google.com/?q=105+Maryland+Street,+Cubao,+Quezon+City" },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 glass rounded-xl border border-white/5">
-                <div className="w-10 h-10 rounded-lg bg-[#39FF14]/10 border border-[#39FF14]/20 flex items-center justify-center shrink-0">
-                  <item.icon className="w-4 h-4 text-[#39FF14]" />
+              <div key={i} className="flex items-center gap-4 p-5 border border-black/5 bg-[#FAFAFA] hover:border-black transition-colors">
+                <div className="w-10 h-10 rounded-[2px] bg-white border border-black/10 flex items-center justify-center shrink-0">
+                  <item.icon className="w-4 h-4 text-black" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">{item.label}</p>
+                  <p className="text-[9px] text-[#707070] uppercase tracking-widest font-bold mb-1">{item.label}</p>
                   {item.href ? (
-                    <a href={item.href} className="text-white text-sm font-semibold hover:text-[#39FF14] transition-colors truncate block">{item.value}</a>
+                    <a href={item.href} className="text-[11px] text-black font-bold uppercase tracking-wider hover:underline truncate block">{item.value}</a>
                   ) : (
-                    <p className="text-white text-sm font-semibold">{item.value}</p>
+                    <p className="text-[11px] text-black font-bold uppercase tracking-wider">{item.value}</p>
                   )}
                 </div>
               </div>
@@ -167,153 +179,164 @@ export default function ContactPage() {
         </div>
       </div>
 
-      <section className="py-16">
+      <section className="py-[50px]">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
-            {/* Form — wider */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-16">
+            
+            {/* Form */}
             <SectionObserver className="lg:col-span-3">
-              <div className="glass rounded-2xl border border-white/5 overflow-hidden">
-                <div className="px-8 py-6 border-b border-white/5 bg-white/2">
-                  <h2 className="font-orbitron font-bold text-2xl text-white">Send Us a Message</h2>
-                  <p className="text-gray-500 text-sm mt-1">We respond within 24 business hours</p>
-                </div>
-                <div className="p-8">
-                  {submitted ? (
-                    <div className="text-center py-12">
-                      <div className="relative inline-block mb-6">
-                        <div className="w-20 h-20 rounded-full bg-[#39FF14]/10 border border-[#39FF14]/30 flex items-center justify-center mx-auto">
-                          <CheckCircle className="w-10 h-10 text-[#39FF14]" />
-                        </div>
-                        <div className="absolute -inset-3 rounded-full border border-[#39FF14]/15 animate-ping" />
-                      </div>
-                      <h3 className="font-orbitron font-bold text-2xl text-white mb-3">Message Sent!</h3>
-                      <p className="text-gray-400 leading-relaxed mb-2">
-                        Thank you, <span className="text-white font-semibold">{form.name}</span>!
-                      </p>
-                      <p className="text-gray-500 text-sm mb-6">
-                        A confirmation was sent to <span className="text-[#39FF14]">{form.email}</span>. Our team will respond within 24 hours.
-                      </p>
-                      <button
-                        onClick={() => { setSubmitted(false); setForm({ name: "", email: "", phone: "", inquiryType: "General Inquiry", message: "" }); }}
-                        className="btn-outline"
-                      >
-                        Send Another Message
-                      </button>
+              <div className="border border-black/5 p-8 bg-[#FAFAFA]">
+                <h2 className="text-2xl font-bold uppercase tracking-tight text-black mb-2">Send Us a Message</h2>
+                <p className="text-[#707070] text-[11px] font-medium mb-8">We process and respond to direct specifications inquiries within 24 business hours.</p>
+                
+                {submitted ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 rounded-[2px] bg-white border border-black/10 flex items-center justify-center mx-auto mb-6 shadow-sm">
+                      <CheckCircle className="w-8 h-8 text-black" />
                     </div>
-                  ) : (
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div>
-                          <label className={labelCls}>Full Name <span className="text-[#39FF14]">*</span></label>
-                          <input required type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Juan Dela Cruz" className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>Email Address <span className="text-[#39FF14]">*</span></label>
-                          <input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="juan@company.ph" className={inputCls} />
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        <div>
-                          <label className={labelCls}>Phone / Mobile</label>
-                          <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+63 917 000 0000" className={inputCls} />
-                        </div>
-                        <div>
-                          <label className={labelCls}>Inquiry Type <span className="text-[#39FF14]">*</span></label>
-                          <select
-                            value={form.inquiryType}
-                            onChange={(e) => setForm({ ...form, inquiryType: e.target.value })}
-                            className={inputCls}
-                            style={{ background: "#111" }}
-                          >
-                            {INQUIRY_TYPES.map((t) => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
+                    <h3 className="text-xl font-bold text-black uppercase tracking-tight mb-3">Message Sent</h3>
+                    <p className="text-[#707070] text-sm leading-relaxed mb-6 font-medium">
+                      Thank you, <span className="text-black font-bold">{form.name}</span>. A copy was routed to <span className="text-black font-bold">{form.email}</span>.
+                    </p>
+                    <button
+                      onClick={() => { setSubmitted(false); setForm({ name: "", email: "", phone: "", inquiryType: "General Inquiry", message: "" }); }}
+                      className="btn-outline text-xs font-bold uppercase tracking-widest h-12 px-6"
+                    >
+                      Send Another Message
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div>
-                        <label className={labelCls}>Your Message <span className="text-[#39FF14]">*</span></label>
-                        <textarea
-                          required
-                          value={form.message}
-                          onChange={(e) => setForm({ ...form, message: e.target.value })}
-                          placeholder="Tell us how we can help — include details like quantity, use case, timeline, or any specific requirements..."
-                          rows={5}
-                          className={`${inputCls} resize-none`}
-                        />
+                        <label htmlFor="contact-name" className={labelCls}>Full Name <span className="text-black">*</span></label>
+                        <input id="contact-name" name="name" required type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Juan Dela Cruz" className={inputCls} />
                       </div>
+                      <div>
+                        <label htmlFor="contact-email" className={labelCls}>Email Address <span className="text-black">*</span></label>
+                        <input id="contact-email" name="email" required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="juan@company.ph" className={inputCls} />
+                      </div>
+                    </div>
 
-                      <button
-                        type="submit"
-                        disabled={loading || !form.name || !form.email || !form.message}
-                        className="btn-primary w-full flex items-center justify-center gap-2"
-                      >
-                        {loading ? (
-                          <span className="flex items-center gap-2">
-                            <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                            </svg>
-                            Sending...
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div>
+                        <label htmlFor="contact-phone" className={labelCls}>Phone / Mobile</label>
+                        <input id="contact-phone" name="phone" type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+63 917 000 0000" className={inputCls} />
+                      </div>
+                      <div className="relative custom-dropdown-container">
+                        <label htmlFor="contact-inquiry" className={labelCls}>Inquiry Type <span className="text-black">*</span></label>
+                        <button
+                          type="button"
+                          onClick={() => setDropdownOpen(!dropdownOpen)}
+                          className={`${inputCls} w-full flex items-center justify-between text-left hover:border-black transition-all bg-white`}
+                        >
+                          <span className="flex items-center gap-2.5">
+                            {(() => {
+                              const opt = INQUIRY_OPTIONS.find(o => o.value === form.inquiryType) || INQUIRY_OPTIONS[0];
+                              const Icon = opt.icon;
+                              return (
+                                <>
+                                  <Icon className="w-3.5 h-3.5 text-black" />
+                                  <span>{opt.label}</span>
+                                </>
+                              );
+                            })()}
                           </span>
-                        ) : (
-                          <><Send className="w-4 h-4" />Send Message</>
-                        )}
-                      </button>
+                          <ChevronDown className={`w-3.5 h-3.5 text-[#707070] transition-transform duration-300 ${dropdownOpen ? "rotate-180 text-black" : ""}`} />
+                        </button>
 
-                      <p className="text-xs text-gray-600 text-center">
-                        Or call us directly: <a href="tel:+6328123456" className="text-[#39FF14] hover:underline">+63 2 8123 4567</a>
-                      </p>
-                    </form>
-                  )}
-                </div>
+                        {dropdownOpen && (
+                          <div className="absolute left-0 right-0 mt-1.5 rounded-[2px] border border-black/10 bg-white shadow-premium z-50 py-1 max-h-60 overflow-y-auto">
+                            {INQUIRY_OPTIONS.map((opt) => {
+                              const Icon = opt.icon;
+                              const isSelected = form.inquiryType === opt.value;
+                              return (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => {
+                                    setForm({ ...form, inquiryType: opt.value });
+                                    setDropdownOpen(false);
+                                  }}
+                                  className={`w-full flex items-center gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-left transition-colors ${
+                                    isSelected 
+                                      ? "bg-black text-white" 
+                                      : "text-[#707070] hover:bg-[#FAFAFA] hover:text-black"
+                                  }`}
+                                >
+                                  <Icon className={`w-3.5 h-3.5 ${isSelected ? "text-white" : "text-black"}`} />
+                                  <span>{opt.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label htmlFor="contact-message" className={labelCls}>Your Message <span className="text-black">*</span></label>
+                      <textarea
+                        id="contact-message"
+                        name="message"
+                        required
+                        value={form.message}
+                        onChange={(e) => setForm({ ...form, message: e.target.value })}
+                        placeholder="Tell us how we can help — include details like quantity, use case, timeline, or any specific requirements..."
+                        rows={5}
+                        className={`${inputCls} resize-none lowercase normal-case placeholder:uppercase placeholder:text-[10px] placeholder:tracking-widest`}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading || !form.name || !form.email || !form.message}
+                      className="btn-primary w-full h-14 text-xs font-bold uppercase tracking-widest"
+                    >
+                      {loading ? "Sending..." : "Send Message"}
+                    </button>
+                  </form>
+                )}
               </div>
             </SectionObserver>
 
-            {/* Sidebar */}
-            <SectionObserver delay={150} className="lg:col-span-2">
+            {/* Sidebar Details */}
+            <SectionObserver className="lg:col-span-2">
               <div className="space-y-6">
-                {/* FAQ quick links */}
-                <div className="glass rounded-2xl border border-white/5 p-6">
-                  <h3 className="font-orbitron font-bold text-lg text-white mb-4">Quick Answers</h3>
-                  <div className="space-y-3">
+                <div className="border border-black/5 p-8 bg-[#FAFAFA]">
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest text-black mb-5">Verification Standards</h3>
+                  <div className="space-y-4">
                     {[
-                      { q: "How fast can I get a quote?", a: "Within 2 business hours" },
-                      { q: "Do you offer test rides?", a: "Yes — at all our service centers" },
-                      { q: "What is the warranty?", a: "3-year frame, 1-year motor & battery" },
-                      { q: "Can I get fleet pricing?", a: "Yes for orders of 10+ units" },
+                      { q: "Technical Quoting Speed", a: "Within 2 business hours" },
+                      { q: "Demo Availability", a: "Schedule with a technical sales designer" },
+                      { q: "Servicing Center Turnaround", a: "Max 72 hours diagnostic audit" },
+                      { q: "Custom Delivery Options", a: "Available nationwide" },
                     ].map((item, i) => (
-                      <div key={i} className="flex gap-3 p-3 rounded-xl bg-white/2 border border-white/5">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[#39FF14] shrink-0 mt-1.5" />
-                        <div>
-                          <p className="text-xs font-semibold text-white">{item.q}</p>
-                          <p className="text-xs text-[#39FF14] mt-0.5">{item.a}</p>
-                        </div>
+                      <div key={i} className="py-2 border-b border-black/5 last:border-0">
+                        <p className="text-[10px] font-bold text-black uppercase tracking-wider">{item.q}</p>
+                        <p className="text-[11px] font-medium text-[#707070] mt-1">{item.a}</p>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Social / channels */}
-                <div className="glass rounded-2xl border border-white/5 p-6">
-                  <h3 className="font-orbitron font-bold text-lg text-white mb-4">Other Channels</h3>
+                <div className="border border-black/5 p-8 bg-[#FAFAFA]">
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest text-black mb-5">Other Channels</h3>
                   <div className="space-y-3">
                     {[
-                      { label: "Facebook", handle: "@TRIPMobilityPH", href: "https://facebook.com" },
-                      { label: "Instagram", handle: "@tripmobility.ph", href: "https://instagram.com" },
-                      { label: "WhatsApp Business", handle: "+63 917 123 4567", href: "https://wa.me/639171234567" },
-                      { label: "Viber", handle: "+63 917 123 4567", href: "viber://contact?number=639171234567" },
+                      { label: "Facebook Page", handle: "@TRIPMobilityPH", href: "https://facebook.com" },
+                      { label: "Instagram Grid", handle: "@tripmobility.ph", href: "https://instagram.com" },
+                      { label: "WhatsApp Business", handle: "0917 122 8212", href: "https://wa.me/639171228212" },
+                      { label: "Viber Support Channel", handle: "0917 169 2711", href: "viber://chat?number=639171692711" },
                     ].map((item, i) => (
                       <a key={i} href={item.href} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 rounded-xl bg-white/2 border border-white/5 hover:border-[#39FF14]/30 transition-all group"
+                        className="flex items-center justify-between p-4 border border-black/5 hover:border-black transition-colors bg-white shadow-sm"
                       >
                         <div>
-                          <p className="text-xs font-semibold text-white group-hover:text-[#39FF14] transition-colors">{item.label}</p>
-                          <p className="text-xs text-gray-500">{item.handle}</p>
+                          <p className="text-[10px] font-bold text-black uppercase tracking-wider">{item.label}</p>
+                          <p className="text-[9px] font-bold text-[#707070] tracking-widest uppercase mt-1">{item.handle}</p>
                         </div>
-                        <ExternalLink className="w-3.5 h-3.5 text-gray-600 group-hover:text-[#39FF14] transition-colors" />
+                        <ExternalLink className="w-3.5 h-3.5 text-black" />
                       </a>
                     ))}
                   </div>
@@ -321,83 +344,79 @@ export default function ContactPage() {
               </div>
             </SectionObserver>
           </div>
-        </div>
-      </section>
 
-      {/* Service Centers */}
-      <section className="py-16 bg-[#0D0D0D] border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-6">
-          <SectionObserver>
-            <div className="text-center mb-12">
-              <p className="section-label mb-3">Where to Find Us</p>
-              <h2 className="font-orbitron font-bold text-3xl sm:text-4xl text-white">
-                Service <span className="gradient-text">Centers</span>
-              </h2>
-              <p className="text-gray-500 text-sm mt-3">Visit any of our 6 locations nationwide for test rides, service, and support</p>
-            </div>
-          </SectionObserver>
+          {/* Store Locations Map Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mt-16 items-stretch border-t border-black/5 pt-16">
+            <SectionObserver>
+              <div className="border border-black/5 p-10 flex flex-col justify-between h-full space-y-10 bg-[#FAFAFA]">
+                <div className="flex gap-5 items-start">
+                  <div className="w-12 h-12 rounded-[2px] bg-white border border-black/10 flex items-center justify-center shrink-0 shadow-sm">
+                    <Phone className="w-5 h-5 text-black" />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#707070] mb-2">Phone No. / Viber / WhatsApp</h4>
+                    <p className="text-black text-sm font-bold tracking-tight">0917 122 8212 / 0917 169 2711</p>
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {SERVICE_CENTERS.map((center, i) => (
-              <SectionObserver key={i} delay={i * 80}>
-                <div className={`glass rounded-xl border p-5 h-full flex flex-col transition-all hover:scale-[1.01] ${center.flagship ? "border-[#39FF14]/30 bg-[#39FF14]/3" : "border-white/5 hover:border-white/10"}`}>
-                  {center.flagship && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#39FF14] text-[#0A0A0A] text-[10px] font-black rounded-full uppercase mb-3 self-start">
-                      ★ Flagship
-                    </span>
-                  )}
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#39FF14]/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <MapPin className="w-4 h-4 text-[#39FF14]" />
-                    </div>
-                    <p className={`font-semibold text-sm leading-snug ${center.flagship ? "text-[#39FF14]" : "text-white"}`}>
-                      {center.city.split(" — ")[0]}
+                <div className="flex gap-5 items-start">
+                  <div className="w-12 h-12 rounded-[2px] bg-white border border-black/10 flex items-center justify-center shrink-0 shadow-sm">
+                    <Mail className="w-5 h-5 text-black" />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#707070] mb-2">Email Address</h4>
+                    <p className="text-black text-[13px] font-bold tracking-tight">gobindra@ggii.com.ph</p>
+                  </div>
+                </div>
+
+                <div className="flex gap-5 items-start">
+                  <div className="w-12 h-12 rounded-[2px] bg-white border border-black/10 flex items-center justify-center shrink-0 shadow-sm">
+                    <MapPin className="w-5 h-5 text-black" />
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-[#707070] mb-2">Flagship Store Location</h4>
+                    <p className="text-black font-medium text-[13px] leading-relaxed max-w-xs">
+                      105 Maryland Street, Cubao, Quezon City, Metro Manila
                     </p>
                   </div>
-                  {center.city.includes(" — ") && (
-                    <p className="text-xs text-[#39FF14]/70 mb-2 font-medium pl-11">{center.city.split(" — ")[1]}</p>
-                  )}
-                  <p className="text-xs text-gray-400 mb-1 pl-11">{center.address}</p>
-                  <div className="flex items-center gap-1.5 pl-11 mb-1">
-                    <Clock className="w-3 h-3 text-gray-600 shrink-0" />
-                    <p className="text-xs text-gray-500">{center.hours}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 pl-11 mb-4">
-                    <Phone className="w-3 h-3 text-gray-600 shrink-0" />
-                    <a href={`tel:${center.phone.replace(/\s/g, "")}`} className="text-xs text-gray-400 hover:text-[#39FF14] transition-colors">{center.phone}</a>
-                  </div>
-                  <a
-                    href={center.mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-auto flex items-center gap-2 text-xs text-[#39FF14] hover:text-[#4FFF2A] font-semibold transition-colors group"
-                  >
-                    <Navigation className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    Get Directions
-                    <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
-                  </a>
                 </div>
-              </SectionObserver>
-            ))}
+              </div>
+            </SectionObserver>
+
+            <SectionObserver>
+              <div className="border border-black/5 h-[320px] lg:h-full relative min-h-[300px]">
+                <iframe
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3860.8415843468574!2d121.0422967!3d14.625187!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397b7afca100b73%3A0xe5107e3bd2623e1!2s105%20Maryland%20St%2C%20Cubao%2C%20Quezon%20City%2C%20Metro%20Manila!5e0!3m2!1sen!2sph!4v1700000000000!5m2!1sen!2sph"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="absolute inset-0 w-full h-full grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-500 object-cover"
+                />
+              </div>
+            </SectionObserver>
           </div>
         </div>
       </section>
 
-      {/* CTA strip */}
-      <section className="py-16 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#39FF14]/8 via-transparent to-[#00FFFF]/5" />
-        <div className="relative max-w-4xl mx-auto px-6 text-center">
+
+
+      {/* Test ride demo */}
+      <section className="py-[50px] border-t border-black/5 text-center bg-white">
+        <div className="max-w-2xl mx-auto px-6">
           <SectionObserver>
-            <h2 className="font-orbitron font-bold text-3xl text-white mb-4">
-              Ready for a <span className="gradient-text">Test Ride?</span>
-            </h2>
-            <p className="text-gray-400 mb-8">Visit any service center — no appointment needed Mon–Sat. Or book a fleet demo for your team.</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-black uppercase tracking-tight mb-6">Book A Test Ride</h2>
+            <p className="text-[#707070] font-medium text-sm max-w-sm mx-auto mb-10 leading-relaxed">
+              Visit any regional service center Monday through Saturday to experience a TRIP vehicle firsthand.
+            </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <a href="tel:+6328123456" className="btn-primary flex items-center justify-center gap-2">
+              <a href="tel:+6328123456" className="btn-primary text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 h-14 px-8">
                 <Phone className="w-4 h-4" /> Book a Visit
               </a>
-              <a href="mailto:fleet@tripmobility.ph" className="btn-outline flex items-center justify-center gap-2">
-                <Mail className="w-4 h-4" /> Fleet Demo Request
+              <a href="mailto:fleet@tripmobility.ph" className="btn-outline text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 h-14 px-8">
+                <Mail className="w-4 h-4" /> Request Fleet Demo
               </a>
             </div>
           </SectionObserver>
@@ -406,3 +425,4 @@ export default function ContactPage() {
     </div>
   );
 }
+

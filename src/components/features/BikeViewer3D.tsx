@@ -1,8 +1,8 @@
-import { useRef, useState, Suspense } from "react";
+import { useRef, useState, Suspense, Component } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Html, Line } from "@react-three/drei";
 import * as THREE from "three";
-import { X, Zap, Battery, Settings, ChevronRight } from "lucide-react";
+import { X, Zap, Battery, Settings, ChevronRight, AlertTriangle } from "lucide-react";
 
 interface HotspotInfo {
   id: string;
@@ -277,6 +277,23 @@ function Scene({ activeHotspot, setActiveHotspot }: { activeHotspot: string | nu
   );
 }
 
+class ThreeErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode }) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center gap-3 rounded-2xl border border-white/10 bg-[#080808]" style={{ height: "460px" }}>
+          <AlertTriangle className="w-10 h-10 text-yellow-500" />
+          <p className="text-gray-400 text-sm font-medium">3D Viewer Unavailable</p>
+          <p className="text-gray-600 text-xs text-center max-w-xs">WebGL is not supported in your browser or is disabled. View our product images and specs below instead.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function BikeViewer3D() {
   const [activeHotspot, setActiveHotspot] = useState<string | null>(null);
   const activeInfo = HOTSPOTS.find((h) => h.id === activeHotspot);
@@ -284,6 +301,7 @@ export default function BikeViewer3D() {
   return (
     <div className="relative w-full rounded-2xl overflow-hidden border border-white/10 bg-[#080808]" style={{ height: "460px" }}>
       {/* Canvas */}
+      <ThreeErrorBoundary>
       <Canvas
         camera={{ position: [0, 0.5, 4.5], fov: 55 }}
         shadows
@@ -294,6 +312,7 @@ export default function BikeViewer3D() {
           <Scene activeHotspot={activeHotspot} setActiveHotspot={setActiveHotspot} />
         </Suspense>
       </Canvas>
+      </ThreeErrorBoundary>
 
       {/* Background gradient overlay */}
       <div

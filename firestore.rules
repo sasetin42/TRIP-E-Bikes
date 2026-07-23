@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Authenticated users (admins) can read and write everything
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Public read access for client-facing collections
+    match /system_settings/{doc} {
+      allow read: if true;
+    }
+    match /settings/{doc} {
+      allow read: if true;
+    }
+    match /product_categories/{doc} {
+      allow read: if true;
+    }
+    match /products_cms/{doc} {
+      allow read: if true;
+    }
+    match /faqs/{doc} {
+      allow read: if true;
+    }
+    match /media/{doc} {
+      allow read: if true;
+    }
+  }
+}
