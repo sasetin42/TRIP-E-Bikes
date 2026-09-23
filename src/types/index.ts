@@ -9,18 +9,7 @@ export interface Product {
   badge?: string;
   brochureUrl?: string | null;
   videoUrl?: string | null;
-  specs: {
-    motor: string;
-    battery: string;
-    range: string;
-    topSpeed: string;
-    weight: string;
-    payload: string;
-    chargeTime: string;
-    frame: string;
-    brakes: string;
-    tires: string;
-  };
+  specs: Record<string, string>;
   features: string[];
   useCases: string[];
   colors: string[];

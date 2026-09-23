@@ -161,16 +161,19 @@ export default function ProductCard({ product, onQuote, featured }: ProductCardP
           </div>
 
           {/* Primary Specs Grid */}
-          <div className="grid grid-cols-4 gap-3 mb-5">
+          <div className="grid grid-cols-4 gap-2 mb-5">
             {primarySpecs.map((key) => {
               const spec = SpecIconMap[key];
               const Icon = spec.icon;
-              const val = product.specs[key];
+              const rawVal = product.specs?.[key] || "";
+              const val = formatSpecValue(key, rawVal);
               return (
-                <div key={key} className="text-center p-2 bg-[#FAFAFA] border border-black/5 rounded-[2px]">
-                  <Icon className="w-4 h-4 text-black mx-auto mb-1" />
-                  <p className="text-[9px] text-[#707070] uppercase tracking-wider">{spec.label}</p>
-                  <p className="text-[10px] font-bold text-black leading-tight mt-0.5">{formatSpecValue(key, val)}</p>
+                <div key={key} className="text-center p-2 bg-[#FAFAFA] border border-black/5 rounded-[2px] flex flex-col justify-between items-center min-h-[64px]">
+                  <Icon className="w-4 h-4 text-black mx-auto mb-0.5 shrink-0" />
+                  <p className="text-[9px] text-[#707070] uppercase tracking-wider font-medium">{spec.label}</p>
+                  <p className="text-[10px] font-bold text-black leading-tight mt-0.5 break-words max-w-full">
+                    {val || "N/A"}
+                  </p>
                 </div>
               );
             })}

@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { trackProductView, trackCTAClick } from "@/hooks/useTracking";
 import { useParams, Link, Navigate } from "react-router-dom";
 import ProductReviews from "@/components/features/ProductReviews";
@@ -18,7 +18,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { toast } from "sonner";
 import OptimizedImage from "@/components/features/OptimizedImage";
 
-const BikeViewer3D = lazy(() => import("@/components/features/BikeViewer3D"));
+
 
 const FAQ_ITEMS = [
   { q: "What is included in the warranty?", a: "All TRIP e-bikes come with a 1-year frame warranty, 1-year motor warranty, and 1-year battery warranty. This covers manufacturing defects and component failures under normal use." },
@@ -53,7 +53,7 @@ export default function ProductDetailPage() {
   const [productsList, setProductsList] = useState<Product[]>([]);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"3d" | "features" | "specs" | "usecases" | "video">("3d");
+  const [activeTab, setActiveTab] = useState<"features" | "specs" | "usecases" | "video">("features");
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [selectedColor, setSelectedColor] = useState("");
   const [descExpanded, setDescExpanded] = useState(false);
@@ -460,7 +460,6 @@ export default function ProductDetailPage() {
           
           <div className="flex gap-2 border-b border-black/5 mb-8 overflow-x-auto pb-0">
             {([
-              { id: "3d", label: "3D View" },
               product.videoUrl ? { id: "video", label: "Showreel" } : null,
               { id: "features", label: "Core Features" },
               { id: "specs", label: "Technical Specifications" },
@@ -480,13 +479,7 @@ export default function ProductDetailPage() {
             ))}
           </div>
 
-          {activeTab === "3d" && (
-            <div className="border border-black/5 p-6 bg-white">
-              <Suspense fallback={<div className="h-[400px] bg-gray-100 animate-pulse" />}>
-                <BikeViewer3D />
-              </Suspense>
-            </div>
-          )}
+
 
           {activeTab === "video" && product.videoUrl && (
             <div className="aspect-video w-full border border-black/5 bg-black">
@@ -507,17 +500,28 @@ export default function ProductDetailPage() {
 
           {activeTab === "specs" && (
             <div className="border border-black/5 bg-white">
-              {Object.entries(product.specs).map(([key, value], i) => {
-                const meta = SPEC_META[key];
-                return (
-                  <div key={key} className="flex justify-between items-center py-5 px-6 border-b last:border-0 border-black/5 hover:bg-[#FAFAFA] transition-colors">
-                    <span className="text-[11px] text-[#707070] uppercase tracking-widest font-bold">
-                      {meta?.label || key}
-                    </span>
-                    <span className="text-[13px] text-black uppercase font-bold tracking-wider">{String(value)}</span>
-                  </div>
-                );
-              })}
+              {Object.entries(product.specs)
+                .filter(([key, value]) => {
+                  if (!value || value === "--") return false;
+                  if (key === "motor" && product.specs["Motor Power"]) return false;
+                  if (key === "battery" && product.specs["Battery specifications"]) return false;
+                  if (key === "range" && product.specs["Range"]) return false;
+                  if (key === "topSpeed" && (product.specs["Max Speed"] || product.specs["top_speed"])) return false;
+                  if (key === "payload" && product.specs["Load Capacity"]) return false;
+                  if (key === "chargeTime" && (product.specs["Charging Time"] || product.specs["chargingTime"] || product.specs["charge_time"])) return false;
+                  return true;
+                })
+                .map(([key, value]) => {
+                  const meta = SPEC_META[key];
+                  return (
+                    <div key={key} className="flex justify-between items-center py-5 px-6 border-b last:border-0 border-black/5 hover:bg-[#FAFAFA] transition-colors">
+                      <span className="text-[11px] text-[#707070] uppercase tracking-widest font-bold">
+                        {meta?.label || key}
+                      </span>
+                      <span className="text-[13px] text-black uppercase font-bold tracking-wider">{String(value)}</span>
+                    </div>
+                  );
+                })}
             </div>
           )}
 

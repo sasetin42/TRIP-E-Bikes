@@ -381,14 +381,14 @@ export default function MediaSourceModal({
                       <p className="text-xs text-gray-600 mt-1">Try another search or upload images from your computer.</p>
                     </div>
                   ) : (
-                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-auto max-h-[48vh] pr-1.5 scrollbar-thin">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-auto max-h-[48vh] pr-1.5 scrollbar-thin">
                       {filteredAndSortedMedia.map((item) => {
                         const isSelected = selectedUrls.includes(item.url);
                         return (
                           <div 
                             key={item.id}
                             onClick={() => toggleSelectUrl(item.url)}
-                            className={`group relative aspect-video rounded-xl overflow-hidden bg-[#161616] border cursor-pointer transition-all ${
+                            className={`group relative aspect-video rounded-xl overflow-hidden bg-[#161616] border cursor-pointer transition-all contain-strict ${
                               isSelected 
                                 ? "border-[#39FF14] shadow-[0_0_12px_rgba(57,255,20,0.15)] scale-[0.98]" 
                                 : "border-white/5 hover:border-white/20"
@@ -405,6 +405,7 @@ export default function MediaSourceModal({
                                 alt={item.name} 
                                 className="w-full h-full object-cover select-none"
                                 loading="lazy"
+                                decoding="async"
                               />
                             )}
                             

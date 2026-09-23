@@ -5,7 +5,7 @@ import {
   CheckCircle, ToggleLeft, ToggleRight, Grid3X3, List,
   Sparkles, Settings, RefreshCw, Search, Filter, TrendingUp,
   BarChart3, MessageSquare, ThumbsUp, ThumbsDown, Reply, AlertCircle,
-  Info, Image as ImageIcon, CircleDollarSign, Sliders, ChevronDown, Copy
+  Info, Image as ImageIcon, CircleDollarSign, Sliders, ChevronDown, Copy, Lock
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
@@ -482,18 +482,45 @@ export default function AdminProducts() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ ...emptyForm, specs: { motor: "", battery: "", range: "", topSpeed: "", weight: "", payload: "", chargingTime: "" } });
+    setForm({ 
+      ...emptyForm, 
+      specs: { 
+        motor: "", 
+        battery: "", 
+        range: "", 
+        topSpeed: "", 
+        weight: "", 
+        payload: "", 
+        chargingTime: "" 
+      } 
+    });
     setActiveSection("basic");
     setShowEditor(true);
   };
 
   const openEdit = (p: ProductCMS) => {
     setEditing(p);
+    const existingSpecs = p.specs || {};
+    // Ensure core specs (motor, battery, range, topSpeed) are locked at the top in exact order
+    const orderedSpecs: Record<string, string> = {
+      motor: existingSpecs.motor || "",
+      battery: existingSpecs.battery || "",
+      range: existingSpecs.range || "",
+      topSpeed: existingSpecs.topSpeed || existingSpecs.top_speed || "",
+    };
+
+    // Append remaining custom specs
+    Object.keys(existingSpecs).forEach((key) => {
+      if (!["motor", "battery", "range", "topSpeed", "top_speed"].includes(key)) {
+        orderedSpecs[key] = existingSpecs[key];
+      }
+    });
+
     setForm({
       product_key: p.product_key, name: p.name, tagline: p.tagline || "",
       description: p.description || "", price: p.price, original_price: p.original_price,
       badge: p.badge, category: p.category, primary_image_url: p.primary_image_url,
-      gallery_images: p.gallery_images || [], specs: p.specs || {},
+      gallery_images: p.gallery_images || [], specs: orderedSpecs,
       features: p.features?.length ? p.features : [""],
       use_cases: p.use_cases?.length ? p.use_cases : [""],
       colors: p.colors?.length ? p.colors : [""],
@@ -1312,16 +1339,44 @@ export default function AdminProducts() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs text-gray-400 mb-3 uppercase tracking-widest font-medium">Gallery ({form.gallery_images.length} images)</label>
-                      <button onClick={() => setMediaModalTarget("gallery")} className="w-full h-24 rounded-xl border-2 border-dashed border-white/15 hover:border-[#39FF14]/40 transition-all flex items-center justify-center gap-3 text-gray-500 hover:text-[#39FF14] mb-4">
-                        {uploadingGallery ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Upload className="w-5 h-5" /><p className="text-sm">Upload multiple gallery images</p></>}
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="text-xs text-gray-400 uppercase tracking-widest font-medium">Gallery ({form.gallery_images.length} images)</label>
+                        {form.gallery_images.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, gallery_images: [] }))}
+                            className="text-xs text-red-400 hover:underline flex items-center gap-1"
+                          >
+                            Clear All
+                          </button>
+                        )}
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => setMediaModalTarget("gallery")} 
+                        className="w-full h-20 rounded-xl border-2 border-dashed border-white/15 hover:border-[#39FF14]/40 transition-all flex items-center justify-center gap-3 text-gray-500 hover:text-[#39FF14] mb-4 bg-white/2"
+                      >
+                        {uploadingGallery ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Upload className="w-5 h-5" /><p className="text-sm font-medium">Upload / Add Multiple Gallery Images</p></>}
                       </button>
                       {form.gallery_images.length > 0 && (
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-4 sm:grid-cols-5 gap-3 max-h-[320px] overflow-y-auto pr-1 scrollbar-thin">
                           {form.gallery_images.map((url, i) => (
-                            <div key={i} className="relative rounded-lg overflow-hidden h-20 border border-white/10 group">
-                              <img src={url} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
-                              <button onClick={() => setForm(f => ({ ...f, gallery_images: f.gallery_images.filter((_, j) => j !== i) }))} className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center"><X className="w-4 h-4 text-red-400" /></button>
+                            <div key={url + i} className="relative rounded-lg overflow-hidden aspect-square border border-white/10 bg-black/40 group contain-strict">
+                              <img 
+                                src={url} 
+                                alt={`Gallery ${i + 1}`} 
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-contain p-1.5 transition-transform duration-200 group-hover:scale-105" 
+                              />
+                              <button 
+                                type="button"
+                                onClick={() => setForm(f => ({ ...f, gallery_images: f.gallery_images.filter((_, j) => j !== i) }))} 
+                                className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                                title="Remove image"
+                              >
+                                <X className="w-5 h-5 text-red-400 hover:scale-110 transition-transform" />
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -1469,15 +1524,73 @@ export default function AdminProducts() {
                 {/* ── SPECS ── */}
                 {activeSection === "specs" && (
                   <div className="space-y-4">
-                    <p className="text-xs text-gray-500">Technical specifications visible on the product detail page.</p>
-                    {Object.entries(form.specs).map(([key, value]) => (
-                      <div key={key} className="grid grid-cols-5 gap-3 items-center">
-                        <div className="col-span-2"><input value={key} onChange={e => { const s: Record<string, string> = {}; Object.keys(form.specs).forEach(k => { s[k === key ? e.target.value : k] = form.specs[k]; }); setForm(f => ({ ...f, specs: s })); }} className={inputCls + " py-2 text-xs font-mono text-gray-400"} {...INP_STYLE} /></div>
-                        <div className="col-span-2"><input value={value} onChange={e => setForm(f => ({ ...f, specs: { ...f.specs, [key]: e.target.value } }))} placeholder="Value" className={inputCls + " py-2"} {...INP_STYLE} /></div>
-                        <button onClick={() => { const s = { ...form.specs }; delete s[key]; setForm(f => ({ ...f, specs: s })); }} className="text-red-400 hover:text-red-300"><X className="w-4 h-4" /></button>
-                      </div>
-                    ))}
-                    <button onClick={() => setForm(f => ({ ...f, specs: { ...f.specs, "": "" } }))} className="flex items-center gap-2 text-xs text-[#39FF14] hover:underline"><Plus className="w-3 h-3" />Add Specification</button>
+                    <div className="p-3 bg-[#39FF14]/5 border border-[#39FF14]/20 rounded-xl mb-4">
+                      <p className="text-xs text-[#39FF14] font-semibold flex items-center gap-1.5">
+                        <Lock className="w-3.5 h-3.5" /> Permanent Core Specs Locked
+                      </p>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Motor, Battery, Range, and Top Speed are fixed core parameters displayed prominently on product cards and comparison tables.
+                      </p>
+                    </div>
+
+                    {Object.entries(form.specs).map(([key, value]) => {
+                      const isCoreSpec = ["motor", "battery", "range", "topSpeed"].includes(key);
+                      return (
+                        <div key={key} className={`grid grid-cols-5 gap-3 items-center p-2 rounded-xl transition-all ${isCoreSpec ? "bg-white/3 border border-white/8" : ""}`}>
+                          <div className="col-span-2 relative">
+                            <input 
+                              value={key} 
+                              disabled={isCoreSpec}
+                              onChange={e => { 
+                                if (isCoreSpec) return;
+                                const s: Record<string, string> = {}; 
+                                Object.keys(form.specs).forEach(k => { 
+                                  s[k === key ? e.target.value : k] = form.specs[k]; 
+                                }); 
+                                setForm(f => ({ ...f, specs: s })); 
+                              }} 
+                              className={`${inputCls} py-2 text-xs font-mono ${isCoreSpec ? "bg-black/60 text-[#39FF14] font-bold cursor-not-allowed border-[#39FF14]/20 pr-8" : "text-gray-400"}`} 
+                              {...INP_STYLE} 
+                            />
+                            {isCoreSpec && (
+                              <Lock className="w-3.5 h-3.5 text-[#39FF14]/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            )}
+                          </div>
+                          <div className="col-span-2">
+                            <input 
+                              value={value} 
+                              onChange={e => setForm(f => ({ ...f, specs: { ...f.specs, [key]: e.target.value } }))} 
+                              placeholder={`Enter ${key || "specification"}...`} 
+                              className={inputCls + " py-2"} 
+                              {...INP_STYLE} 
+                            />
+                          </div>
+                          <div>
+                            {!isCoreSpec ? (
+                              <button 
+                                type="button"
+                                onClick={() => { const s = { ...form.specs }; delete s[key]; setForm(f => ({ ...f, specs: s })); }} 
+                                className="text-red-400 hover:text-red-300 p-2 hover:bg-red-500/10 rounded-lg transition-colors"
+                                title="Remove Specification"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-gray-500 font-semibold px-2 py-1 bg-white/5 rounded border border-white/10 uppercase tracking-wider">
+                                Fixed
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <button 
+                      type="button"
+                      onClick={() => setForm(f => ({ ...f, specs: { ...f.specs, "": "" } }))} 
+                      className="flex items-center gap-2 text-xs text-[#39FF14] hover:underline pt-2 font-medium"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Additional Custom Specification
+                    </button>
                   </div>
                 )}
 

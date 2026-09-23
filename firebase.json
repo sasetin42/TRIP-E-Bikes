@@ -6,13 +6,33 @@
     "rules": "storage.rules"
   },
   "hosting": {
-    "target": "trip-e-bikes",
     "public": "dist",
     "ignore": [
       "firebase.json",
       "firestore.rules",
+      "storage.rules",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      }
     ],
     "rewrites": [
       {

@@ -9,9 +9,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: false,
   },
 });
-
-try {
-  supabase.auth.signOut();
-} catch (error) {
-  console.error("Error clearing session on initialization:", error);
-}

@@ -9,6 +9,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import CustomerAuthModal from "@/components/features/CustomerAuthModal";
 import { getBadgeIcon } from "./ProductCard";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { SettingsService } from "@/services/settingsService";
 
 interface QuoteModalProps {
   open: boolean;
@@ -168,6 +169,27 @@ export default function QuoteModal({ open, onClose, preselectedProduct }: QuoteM
     setSubmitted(true);
     setLoading(false);
     toast.success("Quote submitted! Check your email for confirmation.");
+
+    // Asynchronously dispatch quotation email template if email is provided
+    if (form.email && settings) {
+      const quotationTemplate = settings.email_templates?.find(
+        (t) => t.id === "tpl_quotation_ready" || t.category === "Quotation & Fleet Proposal"
+      );
+      if (quotationTemplate && (quotationTemplate.status === "active" || quotationTemplate.enabled)) {
+        SettingsService.sendTemplatedEmail({
+          template: quotationTemplate,
+          recipient: form.email,
+          recipientName: form.name,
+          settings,
+          interpolatedVars: {
+            "{{user_name}}": form.name,
+            "{{first_name}}": form.name.split(" ")[0] || form.name,
+            "{{quote_number}}": data?.quotation_id ? `QUO-${data.quotation_id}` : `QUO-${Date.now().toString().slice(-5)}`,
+            "{{amount}}": form.budget || "Custom Fleet Quote",
+          },
+        }).catch((e) => console.warn("Background quote email dispatch:", e));
+      }
+    }
   };
 
   const canProceed = () => {

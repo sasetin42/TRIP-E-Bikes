@@ -11,6 +11,21 @@ export default defineConfig({
   plugins: [
     react(),
   ],
+  optimizeDeps: {
+    include: [
+      "tailwind-merge",
+      "clsx",
+      "lucide-react",
+      "framer-motion",
+      "react-router-dom",
+      "sonner",
+      "firebase/app",
+      "firebase/firestore",
+      "firebase/storage",
+      "firebase/auth",
+      "@supabase/supabase-js",
+    ],
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

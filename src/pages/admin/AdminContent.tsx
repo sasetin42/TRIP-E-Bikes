@@ -3,7 +3,7 @@ import { MapPin, Plus, Edit, Trash2, Eye, EyeOff, Loader2, Save, X, FileText, Ch
 import { toast } from "sonner";
 import { apiClient } from "@/lib/api-client";
 import { CustomSelect } from "@/components/ui/custom-select";
-import { collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { collection, onSnapshot, getDocs, addDoc, doc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import MediaSourceModal from "@/components/features/MediaSourceModal";
 
@@ -120,43 +120,58 @@ export default function AdminContent() {
   useEffect(() => {
     if (activeTab !== "FAQs") return;
     setLoadingFaqs(true);
-    const qRef = query(collection(db, "faqs"), orderBy("category", "asc"));
-    const unsubscribe = onSnapshot(
-      qRef,
-      async (snapshot) => {
-        if (snapshot.empty || snapshot.size < 5) {
-          // Clear current FAQs and seed new ones
-          try {
-            for (const d of snapshot.docs) {
-              await deleteDoc(doc(db, "faqs", d.id));
-            }
-            for (const item of FAQS) {
-              await addDoc(collection(db, "faqs"), {
-                q: item.q,
-                a: item.a,
-                category: item.category,
-                created_at: serverTimestamp()
-              });
-            }
-          } catch (seedErr) {
-            console.error("Failed to seed initial FAQs:", seedErr);
+
+    let isSubscribed = true;
+    let unsubscribe: () => void = () => {};
+
+    const setupFaqs = async () => {
+      try {
+        const qRef = query(collection(db, "faqs"), orderBy("category", "asc"));
+        const snapshot = await getDocs(qRef);
+        
+        if (snapshot.empty) {
+          // Seed initial FAQs if database is empty
+          for (const item of FAQS) {
+            await addDoc(collection(db, "faqs"), {
+              q: item.q,
+              a: item.a,
+              category: item.category,
+              created_at: serverTimestamp()
+            });
           }
-          return;
         }
-        const list: FAQItem[] = [];
-        snapshot.forEach((doc) => {
-          list.push({ id: doc.id, ...doc.data() } as FAQItem);
-        });
-        setFaqs(list);
-        setLoadingFaqs(false);
-      },
-      (err) => {
-        console.error("Error fetching FAQs:", err);
-        toast.error("Failed to load FAQs: " + err.message);
+        
+        if (!isSubscribed) return;
+
+        unsubscribe = onSnapshot(
+          qRef,
+          (realtimeSnapshot) => {
+            const list: FAQItem[] = [];
+            realtimeSnapshot.forEach((doc) => {
+              list.push({ id: doc.id, ...doc.data() } as FAQItem);
+            });
+            setFaqs(list);
+            setLoadingFaqs(false);
+          },
+          (err) => {
+            console.error("Error fetching FAQs:", err);
+            toast.error("Failed to load FAQs: " + err.message);
+            setLoadingFaqs(false);
+          }
+        );
+      } catch (err: any) {
+        console.error("Error setting up FAQs:", err);
+        toast.error("Error setting up FAQs: " + err.message);
         setLoadingFaqs(false);
       }
-    );
-    return () => unsubscribe();
+    };
+
+    setupFaqs();
+
+    return () => {
+      isSubscribed = false;
+      unsubscribe();
+    };
   }, [activeTab]);
 
   const handleSaveFaq = async (e: React.FormEvent) => {
@@ -411,7 +426,7 @@ export default function AdminContent() {
           <div className="flex justify-end mb-4">
             <button 
               onClick={openNewFaqEditor}
-              className="btn-outline text-xs flex items-center gap-2 border-[#39FF14]/30 text-white hover:bg-[#39FF14]/10 hover:border-[#39FF14]/50"
+              className="px-4 py-2 bg-white/5 hover:bg-[#39FF14]/10 border border-[#39FF14]/30 hover:border-[#39FF14]/50 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-all duration-300"
             >
               <Plus className="w-3.5 h-3.5 text-[#39FF14]" /> Add FAQ
             </button>
