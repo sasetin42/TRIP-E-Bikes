@@ -1,0 +1,8 @@
+{
+  "name": "TRIP Mobility",
+  "description": "Philippines' leading premium electric bike brand offering delivery e-bikes, folding fat bikes, and mountain e-bikes.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
