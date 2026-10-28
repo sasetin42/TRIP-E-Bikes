@@ -2,6 +2,8 @@ import type { Product } from "@/types";
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, orderBy } from "firebase/firestore";
 
+import { normalizeProductSpecs } from "@/utils/specs";
+
 export let PRODUCTS: Product[] = [];
 
 export const PRODUCT_CATEGORIES = [
@@ -36,15 +38,7 @@ export const syncLiveProducts = async (): Promise<Product[]> => {
             badge: p.badge || null,
             brochureUrl: p.brochure_url || null,
             videoUrl: p.video_url || null,
-            specs: {
-              motor: p.specs?.motor || p.specs?.["Motor Power"] || "",
-              battery: p.specs?.battery || p.specs?.["Battery specifications"] || "",
-              range: p.specs?.range || p.specs?.["Range"] || "",
-              topSpeed: p.specs?.topSpeed || p.specs?.top_speed || p.specs?.["Max Speed"] || "",
-              payload: p.specs?.payload || p.specs?.["Load Capacity"] || "",
-              weight: p.specs?.weight || p.specs?.["weight"] || "",
-              ...(p.specs || {})
-            },
+            specs: normalizeProductSpecs(p.specs),
             features: p.features || [],
             useCases: p.use_cases || p.useCases || [],
             colors: p.colors || [],

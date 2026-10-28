@@ -44,8 +44,15 @@ const SpecIconMap: Record<string, { icon: LucideIcon; label: string }> = {
   chargeTime: { icon: Clock, label: "Charge" },
 };
 
+import { getSpecValue, parseSpecMetric } from "@/utils/specs";
+
 export const formatSpecValue = (key: string, val: string) => {
+  if (!val) return "";
   if (key === "motor") return val.replace("Rear Hub Motor", "").trim() || val;
+  const parsed = parseSpecMetric(val);
+  if (parsed.isRange) {
+    return parsed.formatted;
+  }
   return val;
 };
 
@@ -165,7 +172,7 @@ export default function ProductCard({ product, onQuote, featured }: ProductCardP
             {primarySpecs.map((key) => {
               const spec = SpecIconMap[key];
               const Icon = spec.icon;
-              const rawVal = product.specs?.[key] || "";
+              const rawVal = getSpecValue(product.specs, key);
               const val = formatSpecValue(key, rawVal);
               return (
                 <div key={key} className="text-center p-2 bg-[#FAFAFA] border border-black/5 rounded-[2px] flex flex-col justify-between items-center min-h-[64px]">

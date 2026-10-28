@@ -5,6 +5,7 @@ import SectionObserver from "@/components/features/SectionObserver";
 import ParticleField from "@/components/features/ParticleField";
 import { apiClient } from "@/lib/api-client";
 import { trackContactFormSubmit, trackCTAClick, trackPageView } from "@/hooks/useTracking";
+import { getWhatsAppDirectUrl, openWhatsAppDirect } from "@/utils/whatsapp";
 
 const INQUIRY_OPTIONS = [
   { value: "General Inquiry", label: "General Inquiry", icon: MessageSquare },
@@ -324,13 +325,23 @@ export default function ContactPage() {
                   <h3 className="text-[11px] font-bold uppercase tracking-widest text-black mb-5">Other Channels</h3>
                   <div className="space-y-3">
                     {[
-                      { label: "Facebook Page", handle: "@TRIPMobilityPH", href: "https://facebook.com" },
+                      { label: "Facebook Page", handle: "@tripmobilityph", href: "https://www.facebook.com/tripmobilityph" },
                       { label: "Instagram Grid", handle: "@tripmobility.ph", href: "https://instagram.com" },
-                      { label: "WhatsApp Business", handle: "0917 122 8212", href: "https://wa.me/639171228212" },
+                      {
+                        label: "WhatsApp Business",
+                        handle: "0917 122 8212",
+                        href: getWhatsAppDirectUrl(),
+                        isWhatsApp: true
+                      },
                       { label: "Viber Support Channel", handle: "0917 169 2711", href: "viber://chat?number=639171692711" },
                     ].map((item, i) => (
-                      <a key={i} href={item.href} target="_blank" rel="noopener noreferrer"
-                        className="flex items-center justify-between p-4 border border-black/5 hover:border-black transition-colors bg-white shadow-sm"
+                      <a
+                        key={i}
+                        href={item.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={item.isWhatsApp ? e => openWhatsAppDirect(undefined, undefined, e) : undefined}
+                        className="flex items-center justify-between p-4 border border-black/5 hover:border-black transition-colors bg-white shadow-sm cursor-pointer"
                       >
                         <div>
                           <p className="text-[10px] font-bold text-black uppercase tracking-wider">{item.label}</p>

@@ -7,6 +7,7 @@ import ParticleField from "@/components/features/ParticleField";
 import { CompareBar, CompareModal } from "@/components/features/ProductComparison";
 import { SlidersHorizontal, GitCompare, Grid, List, Search, X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getSpecValue, parseSpecMetric } from "@/utils/specs";
 
 export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState("all");
@@ -56,7 +57,7 @@ export default function ProductsPage() {
         <div className="relative max-w-7xl mx-auto px-6 text-center">
           <p className="text-[10px] font-bold text-[#707070] uppercase tracking-[0.3em] mb-4">The Lineup</p>
           <h1 className="text-[35px] font-bold text-black mb-6 uppercase tracking-tight">
-            TRIP E-Bikes
+            TRIP Mobility Products
           </h1>
           <p className="text-[#707070] text-sm sm:text-base max-w-2xl mx-auto mb-6 leading-relaxed font-medium">
             Purpose-built electric vehicles engineered for commuters, utility delivery networks, and mountain adventures.
@@ -157,19 +158,19 @@ export default function ProductsPage() {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-bold text-black">
                         <div>
                           <span className="block text-[9px] text-[#707070] uppercase tracking-wider mb-0.5">Motor</span>
-                          <span className="text-[11px] uppercase tracking-wider">{product.specs.motor}</span>
+                          <span className="text-[11px] uppercase tracking-wider">{getSpecValue(product.specs, "motor") || "—"}</span>
                         </div>
                         <div>
                           <span className="block text-[9px] text-[#707070] uppercase tracking-wider mb-0.5">Range</span>
-                          <span className="text-[11px] uppercase tracking-wider">{product.specs.range}</span>
+                          <span className="text-[11px] uppercase tracking-wider">{parseSpecMetric(getSpecValue(product.specs, "range")).formatted || "—"}</span>
                         </div>
                         <div>
                           <span className="block text-[9px] text-[#707070] uppercase tracking-wider mb-0.5">Top Speed</span>
-                          <span className="text-[11px] uppercase tracking-wider">{product.specs.topSpeed}</span>
+                          <span className="text-[11px] uppercase tracking-wider">{parseSpecMetric(getSpecValue(product.specs, "topSpeed")).formatted || "—"}</span>
                         </div>
                         <div>
                           <span className="block text-[9px] text-[#707070] uppercase tracking-wider mb-0.5">Payload</span>
-                          <span className="text-[11px] uppercase tracking-wider">{product.specs.payload}</span>
+                          <span className="text-[11px] uppercase tracking-wider">{getSpecValue(product.specs, "payload") || "—"}</span>
                         </div>
                       </div>
                     </div>
@@ -231,7 +232,7 @@ export default function ProductsPage() {
                       <td className="py-4 px-6 text-[#707070] uppercase tracking-wider font-bold">{row.label}</td>
                       {productsList.map((p) => (
                         <td key={p.id} className="py-4 px-6 text-center text-black font-bold uppercase tracking-wider">
-                          {p.specs[row.key as keyof typeof p.specs]}
+                          {getSpecValue(p.specs, row.key) || "—"}
                         </td>
                       ))}
                     </tr>

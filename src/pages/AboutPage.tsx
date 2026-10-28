@@ -1,5 +1,9 @@
 import { Link } from "react-router-dom";
-import { Target, Eye, Heart, Award, Users, TrendingUp, ArrowRight, Zap, Flag, Rocket, MapPin, Briefcase, Package, Globe, Star } from "lucide-react";
+import {
+  Target, Eye, Heart, Award, Users, TrendingUp, ArrowRight, Zap,
+  Flag, Rocket, MapPin, Briefcase, Package, Globe, Star, ShieldCheck,
+  BatteryCharging, CheckCircle2, Leaf, Clock
+} from "lucide-react";
 import ParticleField from "@/components/features/ParticleField";
 import SectionObserver from "@/components/features/SectionObserver";
 
@@ -13,12 +17,6 @@ const TIMELINE = [
   { year: "2026", title: "Market Leader", desc: "Recognized as Philippines' #1 premium commercial e-bike brand.", icon: Star },
 ];
 
-const TEAM = [
-  { name: "Miguel Torres", title: "CEO & Co-Founder" },
-  { name: "Sarah Lim", title: "CTO & Co-Founder" },
-  { name: "Carlos Reyes", title: "VP of Sales" },
-  { name: "Ana Santos", title: "Head of Operations" },
-];
 
 export default function AboutPage() {
   return (
@@ -37,34 +35,112 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Mission / Vision */}
-      <section className="py-[50px] border-t border-black/5">
+      {/* Mission / Vision & Core Pillars */}
+      <section className="py-[60px] border-t border-black/5 bg-white">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <SectionObserver>
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <p className="text-[10px] font-bold text-[#707070] uppercase tracking-[0.3em] mb-3">Our Purpose & Direction</p>
+              <h2 className="text-3xl md:text-4xl font-bold text-black uppercase tracking-tight">
+                Mission, Vision & Platform Commitment
+              </h2>
+              <p className="text-[#707070] text-sm mt-3 font-medium">
+                Grounded in the operational data of TRIP Mobility Philippines Inc. — powering sustainable e-mobility for delivery fleets, corporate campuses, government partners, and daily commuters nationwide.
+              </p>
+            </div>
+          </SectionObserver>
+
+          {/* Primary Mission & Vision Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <SectionObserver className="h-full">
+              <div className="h-full flex flex-col border border-black/10 p-8 sm:p-10 hover:border-black hover:shadow-premium transition-all duration-300 bg-[#FAFAFA] relative overflow-hidden">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-[2px] bg-black text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <Target className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold tracking-widest text-[#707070] uppercase block">Operational Mandate</span>
+                    <h3 className="text-2xl font-bold uppercase tracking-wider text-black">Our Mission</h3>
+                  </div>
+                </div>
+                <p className="text-[15px] font-normal text-black leading-relaxed mb-6">
+                  Deliver the highest quality electric bikes and commercial fleet solutions at competitive pricing while providing unmatched nationwide after-sales service, certified spare parts inventory, and digital fleet intelligence — making clean, cost-efficient e-mobility accessible to every Filipino business, rider, and community.
+                </p>
+                <div className="mt-auto pt-6 border-t border-black/10 space-y-3">
+                  {[
+                    "Up to 80%–90% reduction in daily energy costs vs petrol vehicles (₱30 per full charge)",
+                    "Complete Manila-based inventory of certified batteries, motors, and structural parts",
+                    "Dedicated support network spanning Metro Manila, Cebu, Davao, Iloilo, and Clark",
+                  ].map((detail, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-black mt-0.5 shrink-0" />
+                      <span className="text-[13px] text-[#555] font-medium leading-snug">{detail}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SectionObserver>
+
+            <SectionObserver className="h-full">
+              <div className="h-full flex flex-col border border-black/10 p-8 sm:p-10 hover:border-black hover:shadow-premium transition-all duration-300 bg-[#FAFAFA] relative overflow-hidden">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-[2px] bg-black text-white flex items-center justify-center shrink-0 shadow-sm">
+                    <Eye className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold tracking-widest text-[#707070] uppercase block">2030 Horizon</span>
+                    <h3 className="text-2xl font-bold uppercase tracking-wider text-black">Our Vision</h3>
+                  </div>
+                </div>
+                <p className="text-[15px] font-normal text-black leading-relaxed mb-6">
+                  To be the Philippines' undisputed #1 and most trusted electric mobility ecosystem by 2030 — deploying over 100,000 TRIP e-bikes to eliminate millions of tons of urban carbon emissions, transform last-mile delivery economics, and pioneer Southeast Asia's benchmark for green transportation.
+                </p>
+                <div className="mt-auto pt-6 border-t border-black/10 space-y-3">
+                  {[
+                    "Target: 100,000 active TRIP units on Philippine roads replacing fossil fuel transport",
+                    "Nationwide smart charging and battery-swapping infrastructure across major LGUs",
+                    "Seamless digital experience with online quotes, service booking, and live tracking",
+                  ].map((detail, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <CheckCircle2 className="w-4 h-4 text-black mt-0.5 shrink-0" />
+                      <span className="text-[13px] text-[#555] font-medium leading-snug">{detail}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </SectionObserver>
+          </div>
+
+          {/* System Data Details & Core Values */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[
               {
-                icon: Target,
-                title: "Our Mission",
-                desc: "Deliver the highest quality electric bikes at competitive prices while providing exceptional customer service and after-sales support — making e-mobility accessible to every Filipino.",
+                icon: ShieldCheck,
+                title: "Warranty & Quality",
+                subtitle: "Rigorous Standards",
+                desc: "Every TRIP e-bike is backed by our 3-year structural frame warranty, 1-year motor and BMS coverage, and dedicated technical assistance across official service centers.",
               },
               {
-                icon: Eye,
-                title: "Our Vision",
-                desc: "To be the Philippines' most trusted e-mobility brand by 2030 — with 100,000 TRIP e-bikes replacing petrol vehicles on Philippine roads.",
+                icon: BatteryCharging,
+                title: "Efficiency & Range",
+                subtitle: "Commercial-Grade Power",
+                desc: "High-capacity lithium-ion power cells engineered for up to 100+ km per charge, 4–6 hour fast charging, and dual-battery configurations for zero operational downtime.",
               },
               {
-                icon: Heart,
-                title: "Our Values",
-                desc: "Quality without compromise. Innovation in every iteration. Customer success as our metric. Sustainability as our responsibility to the Philippines.",
+                icon: Leaf,
+                title: "Sustainability & Impact",
+                subtitle: "Environmental Commitment",
+                desc: "Zero tailpipe emissions and minimal operational carbon footprint, empowering corporate ESG compliance and helping Philippine cities build cleaner, livable streets.",
               },
             ].map((item, i) => (
               <SectionObserver key={i} className="h-full">
-                <div className="h-full flex flex-col border border-black/5 p-8 hover:border-black hover:shadow-premium transition-all duration-300 bg-[#FAFAFA]">
-                  <div className="w-14 h-14 rounded-[2px] bg-black/5 flex items-center justify-center mb-6 group hover:bg-black transition-colors duration-300">
-                    <item.icon className="w-7 h-7 text-black group-hover:text-white transition-colors duration-300" />
+                <div className="h-full flex flex-col border border-black/5 p-7 hover:border-black hover:shadow-premium transition-all duration-300 bg-[#FAFAFA]">
+                  <div className="w-12 h-12 rounded-[2px] bg-black/5 flex items-center justify-center mb-5 group hover:bg-black transition-colors duration-300">
+                    <item.icon className="w-6 h-6 text-black group-hover:text-white transition-colors duration-300" />
                   </div>
-                  <h3 className="text-[18px] font-bold uppercase tracking-wider text-black mb-4">{item.title}</h3>
-                  <p className="text-[14px] font-normal text-[#707070] leading-relaxed flex-1">{item.desc}</p>
+                  <span className="text-[10px] font-bold text-[#707070] uppercase tracking-wider mb-1">{item.subtitle}</span>
+                  <h4 className="text-[17px] font-bold uppercase tracking-wider text-black mb-3">{item.title}</h4>
+                  <p className="text-[13.5px] font-normal text-[#707070] leading-relaxed flex-1">{item.desc}</p>
                 </div>
               </SectionObserver>
             ))}
@@ -138,30 +214,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="py-[50px] bg-[#FAFAFA] border-t border-black/5">
-        <div className="max-w-7xl mx-auto px-6">
-          <SectionObserver>
-            <div className="text-center mb-16">
-              <p className="text-[10px] font-bold text-[#707070] uppercase tracking-widest mb-3">Leadership</p>
-              <h2 className="text-3xl md:text-4xl font-bold text-black uppercase tracking-tight">The Team Behind TRIP</h2>
-            </div>
-          </SectionObserver>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            {TEAM.map((member, i) => (
-              <SectionObserver key={i} className="h-full">
-                <div className="h-full flex flex-col border border-black/5 bg-white p-8 text-center hover:border-black hover:shadow-premium transition-all duration-300">
-                  <div className="w-16 h-16 rounded-full bg-black border-2 border-white mx-auto mb-5 flex items-center justify-center text-xl font-bold text-white shadow-sm hover:scale-110 transition-transform duration-300">
-                    {member.name[0]}
-                  </div>
-                  <p className="font-bold text-black text-[18px] uppercase tracking-wider mb-2">{member.name}</p>
-                  <p className="text-[14px] font-normal text-[#707070] mt-auto">{member.title}</p>
-                </div>
-              </SectionObserver>
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       {/* CTA */}
       <section className="py-[50px] text-center border-t border-black/5 bg-white">

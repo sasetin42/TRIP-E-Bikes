@@ -10,6 +10,7 @@ import QuoteModal from "@/components/features/QuoteModal";
 import CustomerAuthModal from "@/components/features/CustomerAuthModal";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useSystemSettings } from "@/hooks/useSystemSettings";
+import { getSpecValue } from "@/utils/specs";
 
 const SPEC_LABELS: Record<string, { label: string; icon: any }> = {
   motor:        { label: "Motor Power", icon: Zap },
@@ -77,7 +78,7 @@ export default function ComparePage() {
 
   // Check if a spec value differs across selected products
   const specDiffers = useCallback((key: string) => {
-    const vals = selectedProducts.map(p => (p.specs as any)[key]);
+    const vals = selectedProducts.map(p => getSpecValue(p.specs, key));
     return new Set(vals).size > 1;
   }, [selectedProducts]);
 
@@ -252,7 +253,7 @@ export default function ComparePage() {
                       )}
                     </div>
                     {selectedProducts.map((p, i) => {
-                      const val = (p.specs as any)[key];
+                      const val = getSpecValue(p.specs, key);
                       return (
                         <div key={p.id} className="p-5 text-center border-l border-black/5 flex items-center justify-center">
                           <span className={`text-xs font-bold ${differs ? "text-black" : "text-[#707070]"}`}>
@@ -304,7 +305,7 @@ export default function ComparePage() {
                       {differs && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-black" />}
                     </div>
                     {selectedProducts.map((p, i) => {
-                      const val = (p.specs as any)[key] || "—";
+                      const val = getSpecValue(p.specs, key) || "—";
                       const isHighlight = differs;
                       return (
                         <div key={p.id} className="px-5 py-4 text-center border-l border-black/5 flex items-center justify-center">

@@ -3,101 +3,56 @@ import { Play } from "lucide-react";
 import heroBike from "@/assets/hero-bike.jpg";
 import adminBg from "@/assets/admin-bg.jpg";
 import { syncLiveProducts } from "@/constants/products";
+import { parseSpecMetric, getSpecValue, ParsedSpecMetric } from "@/utils/specs";
 
-interface AnimatedCounterProps {
-  target: number;
-  suffix?: string;
+interface AnimatedMetricProps {
+  metric: ParsedSpecMetric;
   duration?: number;
   active: boolean;
 }
 
-function AnimatedCounter({ target, suffix = "", duration = 2000, active }: AnimatedCounterProps) {
-  const [count, setCount] = useState(0);
+function AnimatedMetric({ metric, duration = 1500, active }: AnimatedMetricProps) {
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    if (!active) return;
+    if (!active) {
+      setProgress(0);
+      return;
+    }
     let startTime: number | null = null;
+    let animId: number;
     const step = (timestamp: number) => {
       if (!startTime) startTime = timestamp;
-      const progress = Math.min((timestamp - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(eased * target));
-      if (progress < 1) requestAnimationFrame(step);
+      const elapsed = timestamp - startTime;
+      const p = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setProgress(eased);
+      if (p < 1) {
+        animId = requestAnimationFrame(step);
+      }
     };
-    requestAnimationFrame(step);
-  }, [active, target, duration]);
+    animId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animId);
+  }, [active, duration, metric.formatted]);
 
-  return <span>{count}{suffix}</span>;
-}
+  if (!metric.formatted) return <span>--</span>;
 
-const MODELS_DATA = {
-  cargo: {
-    name: "Cargo Pro",
-    fullName: "TRIP Cargo Pro",
-    tagline: "Engineered for the Last Mile",
-    metrics: [
-      { label: "Max Range", value: 120, suffix: "km", color: "#FFFFFF", barWidth: 100 },
-      { label: "Top Speed", value: 45, suffix: "km/h", color: "#FFFFFF", barWidth: 75 },
-      { label: "Motor Power", value: 500, suffix: "W", color: "#FFFFFF", barWidth: 66 },
-      { label: "Payload", value: 180, suffix: "kg", color: "#FFFFFF", barWidth: 100 },
-    ],
-    stats: [
-      { label: "CO₂ Saved/Year", value: "1.2T" },
-      { label: "Fuel Cost Saved", value: "₱0/day" },
-      { label: "Charge Time", value: "5–6 hrs" },
-      { label: "Service Life", value: "8+ Years" },
-    ],
-    details: [
-      { label: "Frame Material", value: "High-tensile Steel Alloy" },
-      { label: "Brake System", value: "Hydraulic Disc Brakes" },
-      { label: "Tire Specifications", value: '26" × 4.0" Puncture Fat Tires' },
-    ]
-  },
-  fold: {
-    name: "Fold X",
-    fullName: "TRIP Fold X",
-    tagline: "Compact Power, Limitless Freedom",
-    metrics: [
-      { label: "Max Range", value: 50, suffix: "km", color: "#FFFFFF", barWidth: 41 },
-      { label: "Top Speed", value: 40, suffix: "km/h", color: "#FFFFFF", barWidth: 66 },
-      { label: "Motor Power", value: 500, suffix: "W", color: "#FFFFFF", barWidth: 66 },
-      { label: "Payload", value: 120, suffix: "kg", color: "#FFFFFF", barWidth: 66 },
-    ],
-    stats: [
-      { label: "CO₂ Saved/Year", value: "0.8T" },
-      { label: "Fuel Cost Saved", value: "₱0/day" },
-      { label: "Charge Time", value: "4–5 hrs" },
-      { label: "Service Life", value: "6+ Years" },
-    ],
-    details: [
-      { label: "Frame Material", value: "Aerospace Aluminum Alloy" },
-      { label: "Brake System", value: "Mechanical Disc Brakes" },
-      { label: "Tire Specifications", value: '20" × 4.0" Foldable Fat Tires' },
-    ]
-  },
-  ranger: {
-    name: "Ranger 750",
-    fullName: "TRIP Ranger 750",
-    tagline: "Conquer Every Terrain",
-    metrics: [
-      { label: "Max Range", value: 60, suffix: "km", color: "#FFFFFF", barWidth: 50 },
-      { label: "Top Speed", value: 50, suffix: "km/h", color: "#FFFFFF", barWidth: 83 },
-      { label: "Motor Power", value: 750, suffix: "W", color: "#FFFFFF", barWidth: 100 },
-      { label: "Payload", value: 150, suffix: "kg", color: "#FFFFFF", barWidth: 83 },
-    ],
-    stats: [
-      { label: "CO₂ Saved/Year", value: "1.0T" },
-      { label: "Fuel Cost Saved", value: "₱0/day" },
-      { label: "Charge Time", value: "5–6 hrs" },
-      { label: "Service Life", value: "8+ Years" },
-    ],
-    details: [
-      { label: "Frame Material", value: "Steel Alloy MTB Frame" },
-      { label: "Brake System", value: "Hydraulic Disc Brakes" },
-      { label: "Tire Specifications", value: '26" × 4.0" All-Terrain Tires' },
-    ]
+  // Range value: e.g. 40–60 km
+  if (metric.isRange) {
+    const curMin = Math.round(progress * metric.min);
+    const curMax = Math.round(progress * metric.max);
+    return <span>{curMin}–{curMax}{metric.unit ? ` ${metric.unit}` : ""}</span>;
   }
-};
+
+  // Single numeric value: e.g. 800 W, 310 kg
+  if (metric.value > 0) {
+    const curVal = Math.round(progress * metric.value);
+    return <span>{curVal}{metric.unit ? ` ${metric.unit}` : ""}</span>;
+  }
+
+  // Non-numeric text
+  return <span>{metric.formatted}</span>;
+}
 
 export default function BikeAssemblyAnimation() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -109,7 +64,11 @@ export default function BikeAssemblyAnimation() {
   useEffect(() => {
     syncLiveProducts().then(list => {
       if (list && list.length > 0) {
-        setLiveProducts(list.slice(0, 3));
+        const filtered = list.filter(p => {
+          const name = (p.name || "").toLowerCase();
+          return !name.includes("ranger") && !name.includes("delivery");
+        });
+        setLiveProducts(filtered);
       }
     });
   }, []);
@@ -127,24 +86,23 @@ export default function BikeAssemblyAnimation() {
     return () => observer.disconnect();
   }, [active]);
 
-  // Fallback static data if live products are not loaded yet
-  const activeProduct = liveProducts[selectedIdx];
-  
-  const getNumericValue = (valStr: string) => {
-    if (!valStr) return 0;
-    const num = parseInt(valStr.replace(/[^0-9]/g, ""));
-    return isNaN(num) ? 0 : num;
-  };
+  // Active product from live products
+  const activeProduct = liveProducts[selectedIdx] || liveProducts[0];
 
   const getMetricData = () => {
     if (!activeProduct) {
+      const defaultRange = parseSpecMetric("120 km", "km");
+      const defaultSpeed = parseSpecMetric("45 km/h", "km/h");
+      const defaultMotor = parseSpecMetric("500 W", "W");
+      const defaultPayload = parseSpecMetric("180 kg", "kg");
+
       return {
         name: "Cargo Pro",
         metrics: [
-          { label: "Max Range", value: 120, suffix: "km", color: "#FFFFFF", barWidth: 100 },
-          { label: "Top Speed", value: 45, suffix: "km/h", color: "#FFFFFF", barWidth: 75 },
-          { label: "Motor Power", value: 500, suffix: "W", color: "#FFFFFF", barWidth: 66 },
-          { label: "Payload", value: 180, suffix: "kg", color: "#FFFFFF", barWidth: 100 },
+          { label: "Max Range", parsed: defaultRange, color: "#FFFFFF", barWidth: 80 },
+          { label: "Top Speed", parsed: defaultSpeed, color: "#FFFFFF", barWidth: 75 },
+          { label: "Motor Power", parsed: defaultMotor, color: "#FFFFFF", barWidth: 42 },
+          { label: "Payload", parsed: defaultPayload, color: "#FFFFFF", barWidth: 51 },
         ],
         stats: [
           { label: "CO₂ Saved/Year", value: "1.2T" },
@@ -163,36 +121,73 @@ export default function BikeAssemblyAnimation() {
     }
 
     const s = activeProduct.specs || {};
-    const rangeVal = getNumericValue(s.range || "120");
-    const speedVal = getNumericValue(s.topSpeed || "45");
-    const motorVal = getNumericValue(s.motor || "500");
-    const payloadVal = getNumericValue(s.payload || "180");
+
+    const rawRange = getSpecValue(s, "range", "120 km");
+    const rawSpeed = getSpecValue(s, "topSpeed", "45 km/h");
+    const rawMotor = getSpecValue(s, "motor", "500 W");
+    const rawPayload = getSpecValue(s, "payload", "180 kg");
+
+    const rangeParsed = parseSpecMetric(rawRange, "km");
+    const speedParsed = parseSpecMetric(rawSpeed, "km/h");
+    const motorParsed = parseSpecMetric(rawMotor, "W");
+    const payloadParsed = parseSpecMetric(rawPayload, "kg");
 
     // Dynamic bar calculation percentages relative to standard maximum parameters
-    const rangePercent = Math.min(Math.round((rangeVal / 150) * 100), 100);
-    const speedPercent = Math.min(Math.round((speedVal / 60) * 100), 100);
-    const motorPercent = Math.min(Math.round((motorVal / 1000) * 100), 100);
-    const payloadPercent = Math.min(Math.round((payloadVal / 220) * 100), 100);
+    const rangePercent = Math.min(Math.round(((rangeParsed.value || 50) / 150) * 100), 100);
+    const speedPercent = Math.min(Math.round(((speedParsed.value || 40) / 60) * 100), 100);
+    const motorPercent = Math.min(Math.round(((motorParsed.value || 500) / 1200) * 100), 100);
+    const payloadPercent = Math.min(Math.round(((payloadParsed.value || 150) / 350) * 100), 100);
+
+    // Build dynamic details list directly from live specifications
+    const detailList: { label: string; value: string }[] = [];
+    const frameVal = getSpecValue(s, "frame");
+    const brakesVal = getSpecValue(s, "brakes");
+    const tiresVal = getSpecValue(s, "tires");
+    const batteryVal = getSpecValue(s, "battery");
+    const weightVal = getSpecValue(s, "weight");
+
+    if (frameVal) detailList.push({ label: "Frame Material", value: frameVal });
+    if (brakesVal) detailList.push({ label: "Brake System", value: brakesVal });
+    if (tiresVal) detailList.push({ label: "Tire Specifications", value: tiresVal });
+    if (batteryVal && detailList.length < 3) detailList.push({ label: "Battery Pack", value: batteryVal });
+    if (weightVal && detailList.length < 3) detailList.push({ label: "Total Weight", value: weightVal });
+
+    // If still under 3, pull any extra custom specs from CMS
+    if (detailList.length < 3) {
+      const coreKeys = new Set(["motor", "battery", "range", "topSpeed", "top_speed", "payload", "weight", "frame", "brakes", "tires", "chargingTime", "chargeTime"]);
+      for (const [k, v] of Object.entries(s)) {
+        if (!coreKeys.has(k) && v && String(v).trim()) {
+          detailList.push({ label: k.replace(/([A-Z])/g, " $1").trim(), value: String(v) });
+          if (detailList.length >= 3) break;
+        }
+      }
+    }
+
+    if (detailList.length === 0) {
+      detailList.push(
+        { label: "Frame Material", value: "High-tensile Alloy" },
+        { label: "Brake System", value: "Hydraulic Disc Brakes" },
+        { label: "Tire Specifications", value: 'Heavy-Duty Tubeless Tires' }
+      );
+    }
+
+    const chargeTimeVal = getSpecValue(s, "chargingTime", "5–6 hrs");
 
     return {
       name: activeProduct.name,
       metrics: [
-        { label: "Max Range", value: rangeVal, suffix: "km", color: "#FFFFFF", barWidth: rangePercent },
-        { label: "Top Speed", value: speedVal, suffix: "km/h", color: "#FFFFFF", barWidth: speedPercent },
-        { label: "Motor Power", value: motorVal, suffix: "W", color: "#FFFFFF", barWidth: motorPercent },
-        { label: "Payload", value: payloadVal, suffix: "kg", color: "#FFFFFF", barWidth: payloadPercent },
+        { label: "Max Range", parsed: rangeParsed, color: "#FFFFFF", barWidth: rangePercent },
+        { label: "Top Speed", parsed: speedParsed, color: "#FFFFFF", barWidth: speedPercent },
+        { label: "Motor Power", parsed: motorParsed, color: "#FFFFFF", barWidth: motorPercent },
+        { label: "Payload", parsed: payloadParsed, color: "#FFFFFF", barWidth: payloadPercent },
       ],
       stats: [
-        { label: "CO₂ Saved/Year", value: rangeVal > 80 ? "1.2T" : rangeVal > 55 ? "1.0T" : "0.8T" },
+        { label: "CO₂ Saved/Year", value: rangeParsed.value > 80 ? "1.2T" : rangeParsed.value > 55 ? "1.0T" : "0.8T" },
         { label: "Fuel Cost Saved", value: "₱0/day" },
-        { label: "Charge Time", value: s.chargeTime || s.chargingTime || "5–6 hrs" },
+        { label: "Charge Time", value: chargeTimeVal },
         { label: "Service Life", value: "8+ Years" },
       ],
-      details: [
-        { label: "Frame Material", value: s.frame || "High-tensile Alloy" },
-        { label: "Brake System", value: s.brakes || "Hydraulic Disc Brakes" },
-        { label: "Tire Specifications", value: s.tires || '26" × 4.0" Fat Tires' },
-      ],
+      details: detailList,
       image: activeProduct.image || heroBike,
       videoUrl: activeProduct.videoUrl || null
     };
@@ -322,7 +317,7 @@ export default function BikeAssemblyAnimation() {
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">{metric.label}</p>
                     <p className="font-bold text-xl" style={{ color: metric.color }}>
-                      <AnimatedCounter target={metric.value} suffix={metric.suffix} active={active} duration={1500} />
+                      <AnimatedMetric metric={metric.parsed} active={active} duration={1500} />
                     </p>
                   </div>
                   <div className="h-1 bg-white/10 rounded-full overflow-hidden">

@@ -17,6 +17,7 @@ import { doc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "firebase/fi
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { toast } from "sonner";
 import OptimizedImage from "@/components/features/OptimizedImage";
+import { getSpecValue, parseSpecMetric } from "@/utils/specs";
 
 
 
@@ -294,10 +295,10 @@ export default function ProductDetailPage() {
               {/* Dynamic specs variables grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
                 {[
-                  { key: "motor", val: product.specs.motor?.replace("Rear Hub Motor", "").trim() || product.specs.motor },
-                  { key: "battery", val: product.specs.battery },
-                  { key: "range", val: product.specs.range },
-                  { key: "topSpeed", val: product.specs.topSpeed },
+                  { key: "motor", val: getSpecValue(product.specs, "motor")?.replace("Rear Hub Motor", "").trim() || getSpecValue(product.specs, "motor") },
+                  { key: "battery", val: getSpecValue(product.specs, "battery") },
+                  { key: "range", val: parseSpecMetric(getSpecValue(product.specs, "range")).formatted || getSpecValue(product.specs, "range") },
+                  { key: "topSpeed", val: parseSpecMetric(getSpecValue(product.specs, "topSpeed")).formatted || getSpecValue(product.specs, "topSpeed") },
                 ].map(({ key, val }) => {
                   const meta = SPEC_META[key];
                   return (
@@ -305,7 +306,7 @@ export default function ProductDetailPage() {
                       <p className="text-[9px] text-[#707070] uppercase tracking-widest font-semibold mb-1">
                         {meta?.label || key}
                       </p>
-                      <p className="text-[11px] font-bold text-black uppercase tracking-wider">{val}</p>
+                      <p className="text-[11px] font-bold text-black uppercase tracking-wider">{val || "—"}</p>
                     </div>
                   );
                 })}

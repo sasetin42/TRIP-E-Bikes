@@ -13,7 +13,6 @@ const NAV_LINKS = [
   { label: "Home", href: "/", settingKey: "nav_home_enabled" },
   { label: "Products", href: "/products", settingKey: "nav_products_enabled" },
   { label: "About", href: "/about", settingKey: "nav_about_enabled" },
-  { label: "Blog", href: "/blog", settingKey: "nav_blog_enabled" },
 ];
 
 export default function Navbar() {
@@ -72,22 +71,22 @@ export default function Navbar() {
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           scrolled
-            ? "bg-white/95 backdrop-blur-md border-b border-black/5 py-1.5 sm:py-2 shadow-sm"
-            : "bg-white/80 backdrop-blur-sm py-1.5 sm:py-2"
+            ? "bg-white/95 backdrop-blur-md border-b border-black/5 py-0.5 shadow-sm"
+            : "bg-white/80 backdrop-blur-sm py-0.5 sm:py-1"
         }`}
       >
         <div className="max-w-7xl mx-auto px-6">
           <div className={`flex items-center justify-between transition-all duration-500 ${
-            scrolled ? "h-9 sm:h-11" : "h-10 sm:h-12"
+            scrolled ? "h-11 sm:h-12" : "h-12 sm:h-14"
           }`}>
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-3 group">
+            <Link to="/" className="flex items-center gap-3 group py-0">
               {settings?.brand_logo_main || logoMain ? (
                 <img
                   src={settings?.brand_logo_main || logoMain}
                   alt={title}
-                  className={`w-auto object-contain transition-all duration-500 group-hover:scale-110 ${
-                    scrolled ? "h-9 sm:h-11" : "h-10 sm:h-12"
+                  className={`w-auto object-contain transition-all duration-500 group-hover:scale-105 ${
+                    scrolled ? "h-10 sm:h-11" : "h-11 sm:h-[50px]"
                   }`}
                 />
               ) : (
@@ -135,7 +134,7 @@ export default function Navbar() {
 
               <button
                 onClick={() => setQuoteOpen(true)}
-                className="bg-black text-white font-medium px-6 py-2.5 rounded-[2px] text-xs uppercase tracking-widest transition-all duration-300 hover:bg-[#2C2C2C] active:scale-95 h-10 flex items-center justify-center shadow-premium"
+                className="bg-black text-white font-medium px-5 py-2 rounded-[2px] text-xs uppercase tracking-widest transition-all duration-300 hover:bg-[#2C2C2C] active:scale-95 h-9 flex items-center justify-center shadow-premium"
               >
                 Get a Quote
               </button>
@@ -144,7 +143,7 @@ export default function Navbar() {
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setAccountOpen(!accountOpen)}
-                    className="w-10 h-10 rounded-[2px] bg-white border border-black/10 hover:border-black/30 transition-all flex items-center justify-center font-semibold text-black shadow-sm"
+                    className="w-9 h-9 rounded-[2px] bg-white border border-black/10 hover:border-black/30 transition-all flex items-center justify-center font-semibold text-black shadow-sm text-xs"
                   >
                     {customer.username[0].toUpperCase()}
                   </button>
@@ -153,7 +152,7 @@ export default function Navbar() {
                     <div className="absolute right-0 mt-3 w-64 bg-white border border-black/10 shadow-premium rounded-[2px] overflow-hidden z-50 animate-fade-up">
                       <div className="px-5 py-4 border-b border-black/5 bg-[#FAFAFA]">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-[2px] bg-white border border-black/10 flex items-center justify-center font-semibold text-black">
+                          <div className="w-9 h-9 rounded-[2px] bg-white border border-black/10 flex items-center justify-center font-semibold text-black text-xs">
                             {customer.username[0].toUpperCase()}
                           </div>
                           <div className="min-w-0">
@@ -189,7 +188,7 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => setAuthOpen(true)}
-                  className="w-10 h-10 flex items-center justify-center rounded-[2px] border border-black/10 text-black hover:border-black/30 hover:bg-[#FAFAFA] transition-all shadow-sm"
+                  className="w-9 h-9 flex items-center justify-center rounded-[2px] border border-black/10 text-black hover:border-black/30 hover:bg-[#FAFAFA] transition-all shadow-sm"
                   aria-label="Sign In"
                 >
                   <User className="w-4 h-4" />
@@ -200,10 +199,10 @@ export default function Navbar() {
             {/* Mobile toggle */}
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden w-10 h-10 flex items-center justify-center rounded-[2px] border border-black/10 text-black hover:border-black/30 hover:bg-[#FAFAFA] transition-all"
+              className="lg:hidden w-9 h-9 flex items-center justify-center rounded-[2px] border border-black/10 text-black hover:border-black/30 hover:bg-[#FAFAFA] transition-all"
               aria-label="Toggle menu"
             >
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>

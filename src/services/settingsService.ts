@@ -53,7 +53,7 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettingsState = {
   company_mobile: "+63 917 123 4567",
   company_email: "contact@tripmobility.ph",
   company_website: "https://tripmobility.ph",
-  company_facebook: "https://facebook.com/tripebikes",
+  company_facebook: "https://www.facebook.com/tripmobilityph",
   company_instagram: "https://instagram.com/tripebikes",
   company_twitter: "https://x.com/tripebikes",
   company_description: "Leading eco-friendly sustainable urban mobility solutions and electric fleet services across Southeast Asia.",
